@@ -3,8 +3,6 @@ from urllib2 import URLError, HTTPError, Request
 
 from django.conf import settings
 
-from neo.models import NeoProfile
-
 
 # get Neo config from Django settings module or use test defaults
 CONFIG = getattr(settings, 'NEO', {
@@ -38,14 +36,10 @@ def authenticate(username, password):
      code, consumer_id = _send_request("/consumers/useraccount?%s" \
         % urllib.urlencode({'loginname': username, 'password': password}))
      if code == 200:
-         try:
-             return NeoProfile.objects.get(consumer_id=consumer_id).user
-         except NeoProfile.DoesNotExit:
-             pass
+         return consumer_id
          
      return None
 
 
-def logout(user):
-    neo_profile = NeoProfile.objects.get(user=user)
-    _send_request("/consumers/%s/useraccount/notifylogout" % neo_profile.consumer_id)
+def logout(consumer_id):
+    _send_request("/consumers/%s/useraccount/notifylogout" % consumer_id)

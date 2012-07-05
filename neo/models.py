@@ -6,6 +6,7 @@ from django.dispatch import receiver
 
 from neo.api import logout as logout_neo
 
+
 class NeoProfile(models.Model):
     user = models.ForeignKey(User, unique=True)
     # the Neo consumer id used in API requests
@@ -14,4 +15,5 @@ class NeoProfile(models.Model):
 
 @receiver(user_logged_out)
 def notify_logout(sender, **kwargs):
-    logout_neo(kwargs['user'])
+    neo_profile = NeoProfile.objects.get(user=kwargs['user'])
+    logout_neo(neo_profile.consumer_id)
