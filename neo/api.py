@@ -41,8 +41,12 @@ def authenticate(username=None, password=None, token=None, acq_src=None):
     return None
 
 
-def logout(consumer_id):
-    response = requests.get("/consumers/%s/useraccount/notifylogout" % consumer_id)
+def logout(consumer_id, acq_src=None):
+    params = {'promocode': CONFIG['PROMO_CODE']}
+    if acq_src:
+        params['acquisitionsource'] = acq_src
+    response = requests.put("/consumers/%s/useraccount/notifylogout" % consumer_id,
+        params=params)
     return response.status_code == 200
 
 
