@@ -1,7 +1,8 @@
-import urllib2, urllib
-from urllib2 import URLError, HTTPError, Request
+import re
+import requests
 
 from django.conf import settings
+from django.core import serializers
 
 
 # get Neo config from Django settings module or use test defaults
@@ -18,28 +19,42 @@ BASE_URL = "http://%s:%s/neowebservices/%s/%s" % (
     CONFIG['APP_ID'],
     CONFIG['VERSION_ID']
 )
-
-def _send_request(url, data=None):
-    try:
-        response = urllib2.urlopen(BASE_URL + url, data)
-    except HTTPError, e:
-        return e.code, None
-    except URLError:
-        pass
-    else:
-        return response.getcode(), response.read()   
-    
-    return None
     
     
 def authenticate(username, password):
-     code, consumer_id = _send_request("/consumers/useraccount?%s" \
-        % urllib.urlencode({'loginname': username, 'password': password}))
-     if code == 200:
-         return consumer_id
+     response = requests.get("/consumers/useraccount",
+        params={'loginname': username, 'password': password})
+     if response.status_code == 200:
+         return response.text  # response body contains consumer_id
          
      return None
 
 
 def logout(consumer_id):
-    _send_request("/consumers/%s/useraccount/notifylogout" % consumer_id)
+    response = requests.get("/consumers/%s/useraccount/notifylogout" % consumer_id)
+    return response.status_code == 200
+
+
+# creates a consumer and returns its id and account activation uri
+def create_consumer(user):
+    data = serializers.serialize("xml", user)
+    response = requests.post("/consumers", data=data)
+    if response.status_code == 201:
+        # parse the consumer_id in location header
+        uri = response.headers["Location"]
+        match = re.search(r"/consumers/(?P<id>\d+)/", uri)
+        if match:
+            return match.group('id') 
+    
+    return None
+
+
+# activates the consumer account using the uri provided by create_consumer
+def complete_registration(consumer_id):
+    response = requests.post("/consumers/%s/registration" % consumer_id)
+    return response.status_code == 200
+
+
+def remove_consumer(consumer_id):
+    
+    

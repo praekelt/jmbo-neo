@@ -14,6 +14,7 @@ setup(
         'jmbo',
         'jmbo-foundry',
         'django-ckeditor',
+        'requests'
     ],
     tests_require=[
         'django-setuptest',
