@@ -1,9 +1,11 @@
 import re
 import requests
+from datetime import date
 
 from django.conf import settings
 from django.core import serializers
 
+from neo.xml import parseString
 
 # get Neo config from Django settings module or use test defaults
 CONFIG = getattr(settings, 'NEO', {
@@ -82,6 +84,19 @@ def complete_registration(consumer_id, uri=None):
     return response.status_code == 200
 
 
+# retrieves a list of consumers' identified by email/mobile id and DOB
+# returns a list of dicts like [{'ConsumerID': val, 'LoginName': val, 'ApplicationName': val}, ...]
+def get_consumers(email_id, dob):
+    dob_str = dob.strftime("%Y%m%d")
+    response = requests.get("/consumers/",
+        params = {'dateofbirth': dob_str, 'emailid': email_id})
+    if response.status_code == 200:
+        consumers = parseString(response.text)
+        return consumers.__dict__
+    
+    return None
+    
+    
 # deletes the consumer account
 def remove_consumer(consumer_id):
     
