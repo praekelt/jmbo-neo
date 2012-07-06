@@ -5,7 +5,7 @@ from datetime import date
 from django.conf import settings
 from django.core import serializers
 
-from neo.xml import parseString
+from neo.xml import parseString, GDSParseError
 
 # get Neo config from Django settings module or use test defaults
 CONFIG = getattr(settings, 'NEO', {
@@ -91,13 +91,16 @@ def get_consumers(email_id, dob):
     response = requests.get("/consumers/",
         params = {'dateofbirth': dob_str, 'emailid': email_id})
     if response.status_code == 200:
-        consumers = parseString(response.text)
-        return consumers.__dict__
+        try:
+            consumers = parseString(response.text).Consumer
+            return [o.__dict__ for o in consumers]
+        except GDSParseError:
+            pass
     
     return None
     
     
 # deletes the consumer account
 def remove_consumer(consumer_id):
-    
+    pass
     
