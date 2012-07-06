@@ -24,16 +24,17 @@ BASE_URL = "http://%s:%s/neowebservices/%s/%s" % (
 requests.defaults.safe_mode = True
     
     
-def authenticate(username=None, password=None, token=None):
+def authenticate(username=None, password=None, token=None, acq_src=None):
+    params = {'promocode': CONFIG['PROMO_CODE']}
     if not token:
-        response = requests.get("/consumers/useraccount",
-            params={'loginname': username,
-                'password': password,
-                'promocode': CONFIG['PROMO_CODE']})
+        params['loginname'] = username
+        params['password'] = password
     else:
-        response = requests.get("/consumers/useraccount",
-            params={'authtoken': token,
-                'promocode': CONFIG['PROMO_CODE']})
+        params['authtoken'] = token
+    if acq_src:
+        params['acquisitionsource'] = acq_src
+        
+    response = requests.get("/consumers/useraccount", params=params)
     if response.status_code == 200:
         return response.text  # response body contains consumer_id
         
