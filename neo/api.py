@@ -23,7 +23,8 @@ BASE_URL = "http://%s:%s/neowebservices/%s/%s" % (
 # make the request module catch all exceptions
 requests.defaults.safe_mode = True
     
-    
+
+# authenticates using either username/password or a remember me token
 def authenticate(username=None, password=None, token=None, acq_src=None):
     params = {'promocode': CONFIG['PROMO_CODE']}
     if not token:
@@ -41,6 +42,7 @@ def authenticate(username=None, password=None, token=None, acq_src=None):
     return None
 
 
+# logs the consumer out on Neo server
 def logout(consumer_id, acq_src=None):
     params = {'promocode': CONFIG['PROMO_CODE']}
     if acq_src:
@@ -50,13 +52,14 @@ def logout(consumer_id, acq_src=None):
     return response.status_code == 200
 
 
+# stores a remember me token on Neo server
 def remember_me(consumer_id, token):
     response = requests.put("/consumers/%s/useraccount" % consumer_id,
         params={'authtoken': token})
     return response.status_code == 200
 
 
-# creates a consumer and returns its id and account activation uri
+# creates a consumer and returns the consumer id and validation uri
 def create_consumer(user):
     data = serializers.serialize("xml", user)
     response = requests.post("/consumers", data=data)
@@ -65,17 +68,21 @@ def create_consumer(user):
         uri = response.headers["Location"]
         match = re.search(r"/consumers/(?P<id>\d+)/", uri)
         if match:
-            return match.group('id') 
+            return match.group('id'), uri 
     
     return None
 
 
-# activates the consumer account using the uri provided by create_consumer
-def complete_registration(consumer_id):
-    response = requests.post("/consumers/%s/registration" % consumer_id)
+# activates the newly created consumer account, optionally using a validation uri
+def complete_registration(consumer_id, uri=None):
+    if not uri:
+        response = requests.post("/consumers/%s/registration" % consumer_id)
+    else
+        response = requests.get(uri)
     return response.status_code == 200
 
 
+# deletes the consumer account
 def remove_consumer(consumer_id):
     
     
