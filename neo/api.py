@@ -11,6 +11,7 @@ CONFIG = getattr(settings, 'NEO', {
     'PORT': '8180',
     'APP_ID': '1',
     'VERSION_ID': '1.3',
+    'PROMO_CODE': 'testPromo',
 })
 # the base url for Neo services
 BASE_URL = "http://%s:%s/neowebservices/%s/%s" % (
@@ -19,19 +20,34 @@ BASE_URL = "http://%s:%s/neowebservices/%s/%s" % (
     CONFIG['APP_ID'],
     CONFIG['VERSION_ID']
 )
+# make the request module catch all exceptions
+requests.defaults.safe_mode = True
     
     
-def authenticate(username, password):
-     response = requests.get("/consumers/useraccount",
-        params={'loginname': username, 'password': password})
-     if response.status_code == 200:
-         return response.text  # response body contains consumer_id
-         
-     return None
+def authenticate(username=None, password=None, token=None):
+    if not token:
+        response = requests.get("/consumers/useraccount",
+            params={'loginname': username,
+                'password': password,
+                'promocode': CONFIG['PROMO_CODE']})
+    else:
+        response = requests.get("/consumers/useraccount",
+            params={'authtoken': token,
+                'promocode': CONFIG['PROMO_CODE']})
+    if response.status_code == 200:
+        return response.text  # response body contains consumer_id
+        
+    return None
 
 
 def logout(consumer_id):
     response = requests.get("/consumers/%s/useraccount/notifylogout" % consumer_id)
+    return response.status_code == 200
+
+
+def remember_me(consumer_id, token):
+    response = requests.put("/consumers/%s/useraccount" % consumer_id,
+        params={'authtoken': token})
     return response.status_code == 200
 
 
