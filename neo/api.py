@@ -98,8 +98,28 @@ def get_consumers(email_id, dob):
             pass
     
     return None
-    
-    
+
+
+# links a consumer account from another app with this app
+def link_consumer(consumer_id, username, password, acq_src=None):
+    params = {
+        'loginname': username,
+        'password': password,
+        'promocode': CONFIG['PROMO_CODE']
+    }
+    if acq_src:
+        params['acquisitionsource'] = acq_src
+    response = requests.put("/consumers/%s/registration/" % consumer_id, params=params)
+    if response.status_code == 200:
+        try:
+            consumer = parseString(response.text)
+            return consumer
+        except GDSParseError:
+            pass
+
+    return None
+
+
 # deletes the consumer account
 def remove_consumer(consumer_id):
     pass
