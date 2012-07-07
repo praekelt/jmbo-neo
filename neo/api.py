@@ -79,7 +79,7 @@ def create_consumer(user):
 def complete_registration(consumer_id, uri=None):
     if not uri:
         response = requests.post("/consumers/%s/registration" % consumer_id)
-    else
+    else:
         response = requests.get(uri)
     return response.status_code == 200
 
