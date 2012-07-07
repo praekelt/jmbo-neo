@@ -1,11 +1,13 @@
 import re
 import requests
 from datetime import date
+from StringIO import StringIO
 
 from django.conf import settings
 from django.core import serializers
 
 from neo.xml import parseString, GDSParseError
+
 
 # get Neo config from Django settings module or use test defaults
 CONFIG = getattr(settings, 'NEO', {
@@ -112,12 +114,34 @@ def link_consumer(consumer_id, username, password, acq_src=None):
     response = requests.put("/consumers/%s/registration/" % consumer_id, params=params)
     if response.status_code == 200:
         try:
-            consumer = parseString(response.text)
-            return consumer
+            return parseString(response.text)
         except GDSParseError:
             pass
 
     return None
+
+
+# get a consumer object containing all the consumer data
+def get_consumer(consumer_id):
+    response = requests.get("/consumers/%s/all" % consumer_id)
+    if response.status_code == 200:
+        try:
+            return parseString(response.text)
+        except GDSParseError:
+            pass
+    
+    return None
+
+
+# update a consumer's data on the Neo server
+def update_consumer(consumer_id, consumer):
+    data_stream = StringIO()
+    # write the consumer data in xml to a string stream
+    consumer.export(data_stream, 0)
+    response = requests.put("/consumers/%s" % consumer_id,
+        data=data_stream.getvalue())
+    data_stream.close()
+    return response.status_code == 200
 
 
 # deletes the consumer account
