@@ -3287,6 +3287,729 @@ class HubLifeStylesType(GeneratedsSuper):
 # end class HubLifeStylesType
 
 
+class UserIdentificationDataType(GeneratedsSuper):
+    subclass = None
+    superclass = None
+    def __init__(self, ConsumerID=None, LoginName=None, EmailID=None, TempToken=None):
+        self.ConsumerID = ConsumerID
+        self.LoginName = LoginName
+        self.EmailID = EmailID
+        self.TempToken = TempToken
+    def factory(*args_, **kwargs_):
+        if UserIdentificationDataType.subclass:
+            return UserIdentificationDataType.subclass(*args_, **kwargs_)
+        else:
+            return UserIdentificationDataType(*args_, **kwargs_)
+    factory = staticmethod(factory)
+    def get_ConsumerID(self): return self.ConsumerID
+    def set_ConsumerID(self, ConsumerID): self.ConsumerID = ConsumerID
+    def validate_ConsumerIDType(self, value):
+        # Validate type ConsumerIDType, a restriction on xs:long.
+        pass
+    def get_LoginName(self): return self.LoginName
+    def set_LoginName(self, LoginName): self.LoginName = LoginName
+    def validate_Name(self, value):
+        # Validate type Name, a restriction on xs:string.
+        pass
+    def get_EmailID(self): return self.EmailID
+    def set_EmailID(self, EmailID): self.EmailID = EmailID
+    def validate_EmailId(self, value):
+        # Validate type EmailId, a restriction on xs:string.
+        pass
+    def get_TempToken(self): return self.TempToken
+    def set_TempToken(self, TempToken): self.TempToken = TempToken
+    def validate_Token(self, value):
+        # Validate type Token, a restriction on xs:string.
+        pass
+    def export(self, outfile, level, namespace_='', name_='UserIdentificationDataType', namespacedef_=''):
+        showIndent(outfile, level)
+        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        already_processed = []
+        self.exportAttributes(outfile, level, already_processed, namespace_, name_='UserIdentificationDataType')
+        if self.hasContent_():
+            outfile.write('>\n')
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            showIndent(outfile, level)
+            outfile.write('</%s%s>\n' % (namespace_, name_))
+        else:
+            outfile.write('/>\n')
+    def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='UserIdentificationDataType'):
+        pass
+    def exportChildren(self, outfile, level, namespace_='', name_='UserIdentificationDataType', fromsubclass_=False):
+        if self.ConsumerID is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sConsumerID>%s</%sConsumerID>\n' % (namespace_, self.gds_format_integer(self.ConsumerID, input_name='ConsumerID'), namespace_))
+        if self.LoginName is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sLoginName>%s</%sLoginName>\n' % (namespace_, self.gds_format_string(quote_xml(self.LoginName).encode(ExternalEncoding), input_name='LoginName'), namespace_))
+        if self.EmailID is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sEmailID>%s</%sEmailID>\n' % (namespace_, self.gds_format_string(quote_xml(self.EmailID).encode(ExternalEncoding), input_name='EmailID'), namespace_))
+        if self.TempToken is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sTempToken>%s</%sTempToken>\n' % (namespace_, self.gds_format_string(quote_xml(self.TempToken).encode(ExternalEncoding), input_name='TempToken'), namespace_))
+    def hasContent_(self):
+        if (
+            self.ConsumerID is not None or
+            self.LoginName is not None or
+            self.EmailID is not None or
+            self.TempToken is not None
+            ):
+            return True
+        else:
+            return False
+    def exportLiteral(self, outfile, level, name_='UserIdentificationDataType'):
+        level += 1
+        self.exportLiteralAttributes(outfile, level, [], name_)
+        if self.hasContent_():
+            self.exportLiteralChildren(outfile, level, name_)
+    def exportLiteralAttributes(self, outfile, level, already_processed, name_):
+        pass
+    def exportLiteralChildren(self, outfile, level, name_):
+        if self.ConsumerID is not None:
+            showIndent(outfile, level)
+            outfile.write('ConsumerID=%d,\n' % self.ConsumerID)
+        if self.LoginName is not None:
+            showIndent(outfile, level)
+            outfile.write('LoginName=%s,\n' % quote_python(self.LoginName).encode(ExternalEncoding))
+        if self.EmailID is not None:
+            showIndent(outfile, level)
+            outfile.write('EmailID=%s,\n' % quote_python(self.EmailID).encode(ExternalEncoding))
+        if self.TempToken is not None:
+            showIndent(outfile, level)
+            outfile.write('TempToken=%s,\n' % quote_python(self.TempToken).encode(ExternalEncoding))
+    def build(self, node):
+        self.buildAttributes(node, node.attrib, [])
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, node, nodeName_)
+    def buildAttributes(self, node, attrs, already_processed):
+        pass
+    def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
+        if nodeName_ == 'ConsumerID':
+            sval_ = child_.text
+            try:
+                ival_ = int(sval_)
+            except (TypeError, ValueError), exp:
+                raise_parse_error(child_, 'requires integer: %s' % exp)
+            ival_ = self.gds_validate_integer(ival_, node, 'ConsumerID')
+            self.ConsumerID = ival_
+            self.validate_ConsumerIDType(self.ConsumerID)    # validate type ConsumerIDType
+        elif nodeName_ == 'LoginName':
+            LoginName_ = child_.text
+            LoginName_ = self.gds_validate_string(LoginName_, node, 'LoginName')
+            self.LoginName = LoginName_
+            self.validate_Name(self.LoginName)    # validate type Name
+        elif nodeName_ == 'EmailID':
+            EmailID_ = child_.text
+            EmailID_ = self.gds_validate_string(EmailID_, node, 'EmailID')
+            self.EmailID = EmailID_
+            self.validate_EmailId(self.EmailID)    # validate type EmailId
+        elif nodeName_ == 'TempToken':
+            TempToken_ = child_.text
+            TempToken_ = self.gds_validate_string(TempToken_, node, 'TempToken')
+            self.TempToken = TempToken_
+            self.validate_Token(self.TempToken)    # validate type Token
+# end class UserIdentificationDataType
+
+
+class UnsubscribePreferencesType(GeneratedsSuper):
+    subclass = None
+    superclass = None
+    def __init__(self, ConsumerDetails=None, Preference=None):
+        self.ConsumerDetails = ConsumerDetails
+        if Preference is None:
+            self.Preference = []
+        else:
+            self.Preference = Preference
+    def factory(*args_, **kwargs_):
+        if UnsubscribePreferencesType.subclass:
+            return UnsubscribePreferencesType.subclass(*args_, **kwargs_)
+        else:
+            return UnsubscribePreferencesType(*args_, **kwargs_)
+    factory = staticmethod(factory)
+    def get_ConsumerDetails(self): return self.ConsumerDetails
+    def set_ConsumerDetails(self, ConsumerDetails): self.ConsumerDetails = ConsumerDetails
+    def get_Preference(self): return self.Preference
+    def set_Preference(self, Preference): self.Preference = Preference
+    def add_Preference(self, value): self.Preference.append(value)
+    def insert_Preference(self, index, value): self.Preference[index] = value
+    def export(self, outfile, level, namespace_='', name_='UnsubscribePreferencesType', namespacedef_=''):
+        showIndent(outfile, level)
+        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        already_processed = []
+        self.exportAttributes(outfile, level, already_processed, namespace_, name_='UnsubscribePreferencesType')
+        if self.hasContent_():
+            outfile.write('>\n')
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            showIndent(outfile, level)
+            outfile.write('</%s%s>\n' % (namespace_, name_))
+        else:
+            outfile.write('/>\n')
+    def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='UnsubscribePreferencesType'):
+        pass
+    def exportChildren(self, outfile, level, namespace_='', name_='UnsubscribePreferencesType', fromsubclass_=False):
+        if self.ConsumerDetails is not None:
+            self.ConsumerDetails.export(outfile, level, namespace_, name_='ConsumerDetails')
+        for Preference_ in self.Preference:
+            Preference_.export(outfile, level, namespace_, name_='Preference')
+    def hasContent_(self):
+        if (
+            self.ConsumerDetails is not None or
+            self.Preference
+            ):
+            return True
+        else:
+            return False
+    def exportLiteral(self, outfile, level, name_='UnsubscribePreferencesType'):
+        level += 1
+        self.exportLiteralAttributes(outfile, level, [], name_)
+        if self.hasContent_():
+            self.exportLiteralChildren(outfile, level, name_)
+    def exportLiteralAttributes(self, outfile, level, already_processed, name_):
+        pass
+    def exportLiteralChildren(self, outfile, level, name_):
+        if self.ConsumerDetails is not None:
+            showIndent(outfile, level)
+            outfile.write('ConsumerDetails=model_.ConsumerDetailsType(\n')
+            self.ConsumerDetails.exportLiteral(outfile, level, name_='ConsumerDetails')
+            showIndent(outfile, level)
+            outfile.write('),\n')
+        showIndent(outfile, level)
+        outfile.write('Preference=[\n')
+        level += 1
+        for Preference_ in self.Preference:
+            showIndent(outfile, level)
+            outfile.write('model_.UnsubscribePreferenceType(\n')
+            Preference_.exportLiteral(outfile, level, name_='UnsubscribePreferenceType')
+            showIndent(outfile, level)
+            outfile.write('),\n')
+        level -= 1
+        showIndent(outfile, level)
+        outfile.write('],\n')
+    def build(self, node):
+        self.buildAttributes(node, node.attrib, [])
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, node, nodeName_)
+    def buildAttributes(self, node, attrs, already_processed):
+        pass
+    def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
+        if nodeName_ == 'ConsumerDetails':
+            obj_ = ConsumerDetailsType.factory()
+            obj_.build(child_)
+            self.set_ConsumerDetails(obj_)
+        elif nodeName_ == 'Preference':
+            obj_ = UnsubscribePreferenceType.factory()
+            obj_.build(child_)
+            self.Preference.append(obj_)
+# end class UnsubscribePreferencesType
+
+
+class UnsubscribePreferenceType(GeneratedsSuper):
+    subclass = None
+    superclass = None
+    def __init__(self, QuestionID=None, OptionID=None, OptionDetails=None, BrandID=None, CommunicationChannel=None):
+        self.QuestionID = QuestionID
+        self.OptionID = OptionID
+        self.OptionDetails = OptionDetails
+        self.BrandID = BrandID
+        self.CommunicationChannel = CommunicationChannel
+    def factory(*args_, **kwargs_):
+        if UnsubscribePreferenceType.subclass:
+            return UnsubscribePreferenceType.subclass(*args_, **kwargs_)
+        else:
+            return UnsubscribePreferenceType(*args_, **kwargs_)
+    factory = staticmethod(factory)
+    def get_QuestionID(self): return self.QuestionID
+    def set_QuestionID(self, QuestionID): self.QuestionID = QuestionID
+    def get_OptionID(self): return self.OptionID
+    def set_OptionID(self, OptionID): self.OptionID = OptionID
+    def get_OptionDetails(self): return self.OptionDetails
+    def set_OptionDetails(self, OptionDetails): self.OptionDetails = OptionDetails
+    def get_BrandID(self): return self.BrandID
+    def set_BrandID(self, BrandID): self.BrandID = BrandID
+    def validate_BrandID(self, value):
+        # Validate type BrandID, a restriction on xs:long.
+        pass
+    def get_CommunicationChannel(self): return self.CommunicationChannel
+    def set_CommunicationChannel(self, CommunicationChannel): self.CommunicationChannel = CommunicationChannel
+    def validate_CommunicationChannel(self, value):
+        # Validate type CommunicationChannel, a restriction on xs:byte.
+        pass
+    def export(self, outfile, level, namespace_='', name_='UnsubscribePreferenceType', namespacedef_=''):
+        showIndent(outfile, level)
+        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        already_processed = []
+        self.exportAttributes(outfile, level, already_processed, namespace_, name_='UnsubscribePreferenceType')
+        if self.hasContent_():
+            outfile.write('>\n')
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            showIndent(outfile, level)
+            outfile.write('</%s%s>\n' % (namespace_, name_))
+        else:
+            outfile.write('/>\n')
+    def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='UnsubscribePreferenceType'):
+        pass
+    def exportChildren(self, outfile, level, namespace_='', name_='UnsubscribePreferenceType', fromsubclass_=False):
+        if self.QuestionID is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sQuestionID>%s</%sQuestionID>\n' % (namespace_, self.gds_format_integer(self.QuestionID, input_name='QuestionID'), namespace_))
+        if self.OptionID is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sOptionID>%s</%sOptionID>\n' % (namespace_, self.gds_format_integer(self.OptionID, input_name='OptionID'), namespace_))
+        if self.OptionDetails is not None:
+            self.OptionDetails.export(outfile, level, namespace_, name_='OptionDetails')
+        if self.BrandID is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sBrandID>%s</%sBrandID>\n' % (namespace_, self.gds_format_integer(self.BrandID, input_name='BrandID'), namespace_))
+        if self.CommunicationChannel is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sCommunicationChannel>%s</%sCommunicationChannel>\n' % (namespace_, self.gds_format_integer(self.CommunicationChannel, input_name='CommunicationChannel'), namespace_))
+    def hasContent_(self):
+        if (
+            self.QuestionID is not None or
+            self.OptionID is not None or
+            self.OptionDetails is not None or
+            self.BrandID is not None or
+            self.CommunicationChannel is not None
+            ):
+            return True
+        else:
+            return False
+    def exportLiteral(self, outfile, level, name_='UnsubscribePreferenceType'):
+        level += 1
+        self.exportLiteralAttributes(outfile, level, [], name_)
+        if self.hasContent_():
+            self.exportLiteralChildren(outfile, level, name_)
+    def exportLiteralAttributes(self, outfile, level, already_processed, name_):
+        pass
+    def exportLiteralChildren(self, outfile, level, name_):
+        if self.QuestionID is not None:
+            showIndent(outfile, level)
+            outfile.write('QuestionID=%d,\n' % self.QuestionID)
+        if self.OptionID is not None:
+            showIndent(outfile, level)
+            outfile.write('OptionID=%d,\n' % self.OptionID)
+        if self.OptionDetails is not None:
+            showIndent(outfile, level)
+            outfile.write('OptionDetails=model_.CommunicationChannelDetailsType(\n')
+            self.OptionDetails.exportLiteral(outfile, level, name_='OptionDetails')
+            showIndent(outfile, level)
+            outfile.write('),\n')
+        if self.BrandID is not None:
+            showIndent(outfile, level)
+            outfile.write('BrandID=%d,\n' % self.BrandID)
+        if self.CommunicationChannel is not None:
+            showIndent(outfile, level)
+            outfile.write('CommunicationChannel=%d,\n' % self.CommunicationChannel)
+    def build(self, node):
+        self.buildAttributes(node, node.attrib, [])
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, node, nodeName_)
+    def buildAttributes(self, node, attrs, already_processed):
+        pass
+    def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
+        if nodeName_ == 'QuestionID':
+            sval_ = child_.text
+            try:
+                ival_ = int(sval_)
+            except (TypeError, ValueError), exp:
+                raise_parse_error(child_, 'requires integer: %s' % exp)
+            ival_ = self.gds_validate_integer(ival_, node, 'QuestionID')
+            self.QuestionID = ival_
+        elif nodeName_ == 'OptionID':
+            sval_ = child_.text
+            try:
+                ival_ = int(sval_)
+            except (TypeError, ValueError), exp:
+                raise_parse_error(child_, 'requires integer: %s' % exp)
+            ival_ = self.gds_validate_integer(ival_, node, 'OptionID')
+            self.OptionID = ival_
+        elif nodeName_ == 'OptionDetails':
+            obj_ = CommunicationChannelDetailsType.factory()
+            obj_.build(child_)
+            self.set_OptionDetails(obj_)
+        elif nodeName_ == 'BrandID':
+            sval_ = child_.text
+            try:
+                ival_ = int(sval_)
+            except (TypeError, ValueError), exp:
+                raise_parse_error(child_, 'requires integer: %s' % exp)
+            ival_ = self.gds_validate_integer(ival_, node, 'BrandID')
+            self.BrandID = ival_
+            self.validate_BrandID(self.BrandID)    # validate type BrandID
+        elif nodeName_ == 'CommunicationChannel':
+            sval_ = child_.text
+            try:
+                ival_ = int(sval_)
+            except (TypeError, ValueError), exp:
+                raise_parse_error(child_, 'requires integer: %s' % exp)
+            ival_ = self.gds_validate_integer(ival_, node, 'CommunicationChannel')
+            self.CommunicationChannel = ival_
+            self.validate_CommunicationChannel(self.CommunicationChannel)    # validate type CommunicationChannel
+# end class UnsubscribePreferenceType
+
+
+class CommunicationChannelDetailsType(GeneratedsSuper):
+    subclass = None
+    superclass = None
+    def __init__(self, Postal=None, Email=None, Phone=None):
+        if Postal is None:
+            self.Postal = []
+        else:
+            self.Postal = Postal
+        if Email is None:
+            self.Email = []
+        else:
+            self.Email = Email
+        if Phone is None:
+            self.Phone = []
+        else:
+            self.Phone = Phone
+    def factory(*args_, **kwargs_):
+        if CommunicationChannelDetailsType.subclass:
+            return CommunicationChannelDetailsType.subclass(*args_, **kwargs_)
+        else:
+            return CommunicationChannelDetailsType(*args_, **kwargs_)
+    factory = staticmethod(factory)
+    def get_Postal(self): return self.Postal
+    def set_Postal(self, Postal): self.Postal = Postal
+    def add_Postal(self, value): self.Postal.append(value)
+    def insert_Postal(self, index, value): self.Postal[index] = value
+    def get_Email(self): return self.Email
+    def set_Email(self, Email): self.Email = Email
+    def add_Email(self, value): self.Email.append(value)
+    def insert_Email(self, index, value): self.Email[index] = value
+    def get_Phone(self): return self.Phone
+    def set_Phone(self, Phone): self.Phone = Phone
+    def add_Phone(self, value): self.Phone.append(value)
+    def insert_Phone(self, index, value): self.Phone[index] = value
+    def export(self, outfile, level, namespace_='', name_='CommunicationChannelDetailsType', namespacedef_=''):
+        showIndent(outfile, level)
+        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        already_processed = []
+        self.exportAttributes(outfile, level, already_processed, namespace_, name_='CommunicationChannelDetailsType')
+        if self.hasContent_():
+            outfile.write('>\n')
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            showIndent(outfile, level)
+            outfile.write('</%s%s>\n' % (namespace_, name_))
+        else:
+            outfile.write('/>\n')
+    def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='CommunicationChannelDetailsType'):
+        pass
+    def exportChildren(self, outfile, level, namespace_='', name_='CommunicationChannelDetailsType', fromsubclass_=False):
+        for Postal_ in self.Postal:
+            Postal_.export(outfile, level, namespace_, name_='Postal')
+        for Email_ in self.Email:
+            Email_.export(outfile, level, namespace_, name_='Email')
+        for Phone_ in self.Phone:
+            Phone_.export(outfile, level, namespace_, name_='Phone')
+    def hasContent_(self):
+        if (
+            self.Postal or
+            self.Email or
+            self.Phone
+            ):
+            return True
+        else:
+            return False
+    def exportLiteral(self, outfile, level, name_='CommunicationChannelDetailsType'):
+        level += 1
+        self.exportLiteralAttributes(outfile, level, [], name_)
+        if self.hasContent_():
+            self.exportLiteralChildren(outfile, level, name_)
+    def exportLiteralAttributes(self, outfile, level, already_processed, name_):
+        pass
+    def exportLiteralChildren(self, outfile, level, name_):
+        showIndent(outfile, level)
+        outfile.write('Postal=[\n')
+        level += 1
+        for Postal_ in self.Postal:
+            showIndent(outfile, level)
+            outfile.write('model_.AddressDetailsType(\n')
+            Postal_.exportLiteral(outfile, level, name_='AddressDetailsType')
+            showIndent(outfile, level)
+            outfile.write('),\n')
+        level -= 1
+        showIndent(outfile, level)
+        outfile.write('],\n')
+        showIndent(outfile, level)
+        outfile.write('Email=[\n')
+        level += 1
+        for Email_ in self.Email:
+            showIndent(outfile, level)
+            outfile.write('model_.EmailDetailsType(\n')
+            Email_.exportLiteral(outfile, level, name_='EmailDetailsType')
+            showIndent(outfile, level)
+            outfile.write('),\n')
+        level -= 1
+        showIndent(outfile, level)
+        outfile.write('],\n')
+        showIndent(outfile, level)
+        outfile.write('Phone=[\n')
+        level += 1
+        for Phone_ in self.Phone:
+            showIndent(outfile, level)
+            outfile.write('model_.PhoneDetailsType(\n')
+            Phone_.exportLiteral(outfile, level, name_='PhoneDetailsType')
+            showIndent(outfile, level)
+            outfile.write('),\n')
+        level -= 1
+        showIndent(outfile, level)
+        outfile.write('],\n')
+    def build(self, node):
+        self.buildAttributes(node, node.attrib, [])
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, node, nodeName_)
+    def buildAttributes(self, node, attrs, already_processed):
+        pass
+    def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
+        if nodeName_ == 'Postal':
+            obj_ = AddressDetailsType.factory()
+            obj_.build(child_)
+            self.Postal.append(obj_)
+        elif nodeName_ == 'Email':
+            obj_ = EmailDetailsType.factory()
+            obj_.build(child_)
+            self.Email.append(obj_)
+        elif nodeName_ == 'Phone':
+            obj_ = PhoneDetailsType.factory()
+            obj_.build(child_)
+            self.Phone.append(obj_)
+# end class CommunicationChannelDetailsType
+
+
+class ConsumerDetailsType(GeneratedsSuper):
+    subclass = None
+    superclass = None
+    def __init__(self, Title=None, Suffix=None, FirstName=None, MiddleName=None, LastName=None, MaternalLastName=None, DOB=None, CountryOfResidence=None, PromoCode=None, AcquisitionSource=None):
+        self.Title = Title
+        self.Suffix = Suffix
+        self.FirstName = FirstName
+        self.MiddleName = MiddleName
+        self.LastName = LastName
+        self.MaternalLastName = MaternalLastName
+        self.DOB = DOB
+        self.CountryOfResidence = CountryOfResidence
+        self.PromoCode = PromoCode
+        self.AcquisitionSource = AcquisitionSource
+    def factory(*args_, **kwargs_):
+        if ConsumerDetailsType.subclass:
+            return ConsumerDetailsType.subclass(*args_, **kwargs_)
+        else:
+            return ConsumerDetailsType(*args_, **kwargs_)
+    factory = staticmethod(factory)
+    def get_Title(self): return self.Title
+    def set_Title(self, Title): self.Title = Title
+    def validate_Title(self, value):
+        # Validate type Title, a restriction on Consumer.
+        pass
+    def get_Suffix(self): return self.Suffix
+    def set_Suffix(self, Suffix): self.Suffix = Suffix
+    def validate_Suffix(self, value):
+        # Validate type Suffix, a restriction on xs:string.
+        pass
+    def get_FirstName(self): return self.FirstName
+    def set_FirstName(self, FirstName): self.FirstName = FirstName
+    def validate_FirstName(self, value):
+        # Validate type FirstName, a restriction on Name.
+        pass
+    def get_MiddleName(self): return self.MiddleName
+    def set_MiddleName(self, MiddleName): self.MiddleName = MiddleName
+    def validate_MiddleName(self, value):
+        # Validate type MiddleName, a restriction on Name.
+        pass
+    def get_LastName(self): return self.LastName
+    def set_LastName(self, LastName): self.LastName = LastName
+    def validate_LastName(self, value):
+        # Validate type LastName, a restriction on Name.
+        pass
+    def get_MaternalLastName(self): return self.MaternalLastName
+    def set_MaternalLastName(self, MaternalLastName): self.MaternalLastName = MaternalLastName
+    def get_DOB(self): return self.DOB
+    def set_DOB(self, DOB): self.DOB = DOB
+    def validate_Date(self, value):
+        # Validate type Date, a restriction on xs:date.
+        pass
+    def get_CountryOfResidence(self): return self.CountryOfResidence
+    def set_CountryOfResidence(self, CountryOfResidence): self.CountryOfResidence = CountryOfResidence
+    def validate_CountryName(self, value):
+        # Validate type CountryName, a restriction on Name.
+        pass
+    def get_PromoCode(self): return self.PromoCode
+    def set_PromoCode(self, PromoCode): self.PromoCode = PromoCode
+    def validate_PromoCodeDesc(self, value):
+        # Validate type PromoCodeDesc, a restriction on Name.
+        pass
+    def get_AcquisitionSource(self): return self.AcquisitionSource
+    def set_AcquisitionSource(self, AcquisitionSource): self.AcquisitionSource = AcquisitionSource
+    def validate_AcquisitionSourceType(self, value):
+        # Validate type AcquisitionSourceType, a restriction on Name.
+        pass
+    def export(self, outfile, level, namespace_='', name_='ConsumerDetailsType', namespacedef_=''):
+        showIndent(outfile, level)
+        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        already_processed = []
+        self.exportAttributes(outfile, level, already_processed, namespace_, name_='ConsumerDetailsType')
+        if self.hasContent_():
+            outfile.write('>\n')
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            showIndent(outfile, level)
+            outfile.write('</%s%s>\n' % (namespace_, name_))
+        else:
+            outfile.write('/>\n')
+    def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='ConsumerDetailsType'):
+        pass
+    def exportChildren(self, outfile, level, namespace_='', name_='ConsumerDetailsType', fromsubclass_=False):
+        if self.Title is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sTitle>%s</%sTitle>\n' % (namespace_, self.gds_format_string(quote_xml(self.Title).encode(ExternalEncoding), input_name='Title'), namespace_))
+        if self.Suffix is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sSuffix>%s</%sSuffix>\n' % (namespace_, self.gds_format_string(quote_xml(self.Suffix).encode(ExternalEncoding), input_name='Suffix'), namespace_))
+        if self.FirstName is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sFirstName>%s</%sFirstName>\n' % (namespace_, self.gds_format_string(quote_xml(self.FirstName).encode(ExternalEncoding), input_name='FirstName'), namespace_))
+        if self.MiddleName is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sMiddleName>%s</%sMiddleName>\n' % (namespace_, self.gds_format_string(quote_xml(self.MiddleName).encode(ExternalEncoding), input_name='MiddleName'), namespace_))
+        if self.LastName is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sLastName>%s</%sLastName>\n' % (namespace_, self.gds_format_string(quote_xml(self.LastName).encode(ExternalEncoding), input_name='LastName'), namespace_))
+        if self.MaternalLastName is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sMaternalLastName>%s</%sMaternalLastName>\n' % (namespace_, self.gds_format_string(quote_xml(self.MaternalLastName).encode(ExternalEncoding), input_name='MaternalLastName'), namespace_))
+        if self.DOB is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sDOB>%s</%sDOB>\n' % (namespace_, self.gds_format_string(quote_xml(self.DOB).encode(ExternalEncoding), input_name='DOB'), namespace_))
+        if self.CountryOfResidence is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sCountryOfResidence>%s</%sCountryOfResidence>\n' % (namespace_, self.gds_format_string(quote_xml(self.CountryOfResidence).encode(ExternalEncoding), input_name='CountryOfResidence'), namespace_))
+        if self.PromoCode is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sPromoCode>%s</%sPromoCode>\n' % (namespace_, self.gds_format_string(quote_xml(self.PromoCode).encode(ExternalEncoding), input_name='PromoCode'), namespace_))
+        if self.AcquisitionSource is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sAcquisitionSource>%s</%sAcquisitionSource>\n' % (namespace_, self.gds_format_string(quote_xml(self.AcquisitionSource).encode(ExternalEncoding), input_name='AcquisitionSource'), namespace_))
+    def hasContent_(self):
+        if (
+            self.Title is not None or
+            self.Suffix is not None or
+            self.FirstName is not None or
+            self.MiddleName is not None or
+            self.LastName is not None or
+            self.MaternalLastName is not None or
+            self.DOB is not None or
+            self.CountryOfResidence is not None or
+            self.PromoCode is not None or
+            self.AcquisitionSource is not None
+            ):
+            return True
+        else:
+            return False
+    def exportLiteral(self, outfile, level, name_='ConsumerDetailsType'):
+        level += 1
+        self.exportLiteralAttributes(outfile, level, [], name_)
+        if self.hasContent_():
+            self.exportLiteralChildren(outfile, level, name_)
+    def exportLiteralAttributes(self, outfile, level, already_processed, name_):
+        pass
+    def exportLiteralChildren(self, outfile, level, name_):
+        if self.Title is not None:
+            showIndent(outfile, level)
+            outfile.write('Title=%s,\n' % quote_python(self.Title).encode(ExternalEncoding))
+        if self.Suffix is not None:
+            showIndent(outfile, level)
+            outfile.write('Suffix=%s,\n' % quote_python(self.Suffix).encode(ExternalEncoding))
+        if self.FirstName is not None:
+            showIndent(outfile, level)
+            outfile.write('FirstName=%s,\n' % quote_python(self.FirstName).encode(ExternalEncoding))
+        if self.MiddleName is not None:
+            showIndent(outfile, level)
+            outfile.write('MiddleName=%s,\n' % quote_python(self.MiddleName).encode(ExternalEncoding))
+        if self.LastName is not None:
+            showIndent(outfile, level)
+            outfile.write('LastName=%s,\n' % quote_python(self.LastName).encode(ExternalEncoding))
+        if self.MaternalLastName is not None:
+            showIndent(outfile, level)
+            outfile.write('MaternalLastName=%s,\n' % quote_python(self.MaternalLastName).encode(ExternalEncoding))
+        if self.DOB is not None:
+            showIndent(outfile, level)
+            outfile.write('DOB=%s,\n' % quote_python(self.DOB).encode(ExternalEncoding))
+        if self.CountryOfResidence is not None:
+            showIndent(outfile, level)
+            outfile.write('CountryOfResidence=%s,\n' % quote_python(self.CountryOfResidence).encode(ExternalEncoding))
+        if self.PromoCode is not None:
+            showIndent(outfile, level)
+            outfile.write('PromoCode=%s,\n' % quote_python(self.PromoCode).encode(ExternalEncoding))
+        if self.AcquisitionSource is not None:
+            showIndent(outfile, level)
+            outfile.write('AcquisitionSource=%s,\n' % quote_python(self.AcquisitionSource).encode(ExternalEncoding))
+    def build(self, node):
+        self.buildAttributes(node, node.attrib, [])
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, node, nodeName_)
+    def buildAttributes(self, node, attrs, already_processed):
+        pass
+    def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
+        if nodeName_ == 'Title':
+            Title_ = child_.text
+            Title_ = self.gds_validate_string(Title_, node, 'Title')
+            self.Title = Title_
+            self.validate_Title(self.Title)    # validate type Title
+        elif nodeName_ == 'Suffix':
+            Suffix_ = child_.text
+            Suffix_ = self.gds_validate_string(Suffix_, node, 'Suffix')
+            self.Suffix = Suffix_
+            self.validate_Suffix(self.Suffix)    # validate type Suffix
+        elif nodeName_ == 'FirstName':
+            FirstName_ = child_.text
+            FirstName_ = self.gds_validate_string(FirstName_, node, 'FirstName')
+            self.FirstName = FirstName_
+            self.validate_FirstName(self.FirstName)    # validate type FirstName
+        elif nodeName_ == 'MiddleName':
+            MiddleName_ = child_.text
+            MiddleName_ = self.gds_validate_string(MiddleName_, node, 'MiddleName')
+            self.MiddleName = MiddleName_
+            self.validate_MiddleName(self.MiddleName)    # validate type MiddleName
+        elif nodeName_ == 'LastName':
+            LastName_ = child_.text
+            LastName_ = self.gds_validate_string(LastName_, node, 'LastName')
+            self.LastName = LastName_
+            self.validate_LastName(self.LastName)    # validate type LastName
+        elif nodeName_ == 'MaternalLastName':
+            MaternalLastName_ = child_.text
+            MaternalLastName_ = self.gds_validate_string(MaternalLastName_, node, 'MaternalLastName')
+            self.MaternalLastName = MaternalLastName_
+            self.validate_LastName(self.MaternalLastName)    # validate type LastName
+        elif nodeName_ == 'DOB':
+            DOB_ = child_.text
+            DOB_ = self.gds_validate_string(DOB_, node, 'DOB')
+            self.DOB = DOB_
+            self.validate_Date(self.DOB)    # validate type Date
+        elif nodeName_ == 'CountryOfResidence':
+            CountryOfResidence_ = child_.text
+            CountryOfResidence_ = self.gds_validate_string(CountryOfResidence_, node, 'CountryOfResidence')
+            self.CountryOfResidence = CountryOfResidence_
+            self.validate_CountryName(self.CountryOfResidence)    # validate type CountryName
+        elif nodeName_ == 'PromoCode':
+            PromoCode_ = child_.text
+            PromoCode_ = self.gds_validate_string(PromoCode_, node, 'PromoCode')
+            self.PromoCode = PromoCode_
+            self.validate_PromoCodeDesc(self.PromoCode)    # validate type PromoCodeDesc
+        elif nodeName_ == 'AcquisitionSource':
+            AcquisitionSource_ = child_.text
+            AcquisitionSource_ = self.gds_validate_string(AcquisitionSource_, node, 'AcquisitionSource')
+            self.AcquisitionSource = AcquisitionSource_
+            self.validate_AcquisitionSourceType(self.AcquisitionSource)    # validate type AcquisitionSourceType
+# end class ConsumerDetailsType
+
+
 USAGE_TEXT = """
 Usage: python <Parser>.py [ -s ] <in_xml_file>
 """
@@ -3389,5 +4112,9 @@ __all__ = [
     "PhoneDetailsType",
     "PreferencesType",
     "SocialNetworksType",
-    "UserAccountType"
+    "UserAccountType",
+    "CommunicationChannelDetailsType",
+    "ConsumerDetailsType",
+    "UnsubscribePreferenceType",
+    "UnsubscribePreferencesType"
     ]
