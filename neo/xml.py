@@ -4010,6 +4010,279 @@ class ConsumerDetailsType(GeneratedsSuper):
 # end class ConsumerDetailsType
 
 
+class CountryType(GeneratedsSuper):
+    subclass = None
+    superclass = None
+    def __init__(self, CountryCode=None, DefaultLanguageCode=None, OtherLanguageCode=None, CurrencyCode=None, DefaultTimeZone=None, OtherTimeZones=None, RedirectURL=None):
+        self.CountryCode = CountryCode
+        self.DefaultLanguageCode = DefaultLanguageCode
+        if OtherLanguageCode is None:
+            self.OtherLanguageCode = []
+        else:
+            self.OtherLanguageCode = OtherLanguageCode
+        self.CurrencyCode = CurrencyCode
+        self.DefaultTimeZone = DefaultTimeZone
+        if OtherTimeZones is None:
+            self.OtherTimeZones = []
+        else:
+            self.OtherTimeZones = OtherTimeZones
+        self.RedirectURL = RedirectURL
+    def factory(*args_, **kwargs_):
+        if CountryType.subclass:
+            return CountryType.subclass(*args_, **kwargs_)
+        else:
+            return CountryType(*args_, **kwargs_)
+    factory = staticmethod(factory)
+    def get_CountryCode(self): return self.CountryCode
+    def set_CountryCode(self, CountryCode): self.CountryCode = CountryCode
+    def validate_CountryName(self, value):
+        # Validate type CountryName, a restriction on Name.
+        pass
+    def get_DefaultLanguageCode(self): return self.DefaultLanguageCode
+    def set_DefaultLanguageCode(self, DefaultLanguageCode): self.DefaultLanguageCode = DefaultLanguageCode
+    def validate_LanguageCode(self, value):
+        # Validate type LanguageCode, a restriction on xs:string.
+        pass
+    def get_OtherLanguageCode(self): return self.OtherLanguageCode
+    def set_OtherLanguageCode(self, OtherLanguageCode): self.OtherLanguageCode = OtherLanguageCode
+    def add_OtherLanguageCode(self, value): self.OtherLanguageCode.append(value)
+    def insert_OtherLanguageCode(self, index, value): self.OtherLanguageCode[index] = value
+    def get_CurrencyCode(self): return self.CurrencyCode
+    def set_CurrencyCode(self, CurrencyCode): self.CurrencyCode = CurrencyCode
+    def validate_CurrencyCode(self, value):
+        # Validate type CurrencyCode, a restriction on xs:string.
+        pass
+    def get_DefaultTimeZone(self): return self.DefaultTimeZone
+    def set_DefaultTimeZone(self, DefaultTimeZone): self.DefaultTimeZone = DefaultTimeZone
+    def get_OtherTimeZones(self): return self.OtherTimeZones
+    def set_OtherTimeZones(self, OtherTimeZones): self.OtherTimeZones = OtherTimeZones
+    def add_OtherTimeZones(self, value): self.OtherTimeZones.append(value)
+    def insert_OtherTimeZones(self, index, value): self.OtherTimeZones[index] = value
+    def get_RedirectURL(self): return self.RedirectURL
+    def set_RedirectURL(self, RedirectURL): self.RedirectURL = RedirectURL
+    def export(self, outfile, level, namespace_='', name_='CountryType', namespacedef_=''):
+        showIndent(outfile, level)
+        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        already_processed = []
+        self.exportAttributes(outfile, level, already_processed, namespace_, name_='CountryType')
+        if self.hasContent_():
+            outfile.write('>\n')
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            showIndent(outfile, level)
+            outfile.write('</%s%s>\n' % (namespace_, name_))
+        else:
+            outfile.write('/>\n')
+    def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='CountryType'):
+        pass
+    def exportChildren(self, outfile, level, namespace_='', name_='CountryType', fromsubclass_=False):
+        if self.CountryCode is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sCountryCode>%s</%sCountryCode>\n' % (namespace_, self.gds_format_string(quote_xml(self.CountryCode).encode(ExternalEncoding), input_name='CountryCode'), namespace_))
+        if self.DefaultLanguageCode is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sDefaultLanguageCode>%s</%sDefaultLanguageCode>\n' % (namespace_, self.gds_format_string(quote_xml(self.DefaultLanguageCode).encode(ExternalEncoding), input_name='DefaultLanguageCode'), namespace_))
+        for OtherLanguageCode_ in self.OtherLanguageCode:
+            showIndent(outfile, level)
+            outfile.write('<%sOtherLanguageCode>%s</%sOtherLanguageCode>\n' % (namespace_, self.gds_format_string(quote_xml(OtherLanguageCode_).encode(ExternalEncoding), input_name='OtherLanguageCode'), namespace_))
+        if self.CurrencyCode is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sCurrencyCode>%s</%sCurrencyCode>\n' % (namespace_, self.gds_format_string(quote_xml(self.CurrencyCode).encode(ExternalEncoding), input_name='CurrencyCode'), namespace_))
+        if self.DefaultTimeZone is not None:
+            self.DefaultTimeZone.export(outfile, level, namespace_, name_='DefaultTimeZone', )
+        for OtherTimeZones_ in self.OtherTimeZones:
+            OtherTimeZones_.export(outfile, level, namespace_, name_='OtherTimeZones')
+        if self.RedirectURL is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sRedirectURL>%s</%sRedirectURL>\n' % (namespace_, self.gds_format_string(quote_xml(self.RedirectURL).encode(ExternalEncoding), input_name='RedirectURL'), namespace_))
+    def hasContent_(self):
+        if (
+            self.CountryCode is not None or
+            self.DefaultLanguageCode is not None or
+            self.OtherLanguageCode or
+            self.CurrencyCode is not None or
+            self.DefaultTimeZone is not None or
+            self.OtherTimeZones or
+            self.RedirectURL is not None
+            ):
+            return True
+        else:
+            return False
+    def exportLiteral(self, outfile, level, name_='CountryType'):
+        level += 1
+        self.exportLiteralAttributes(outfile, level, [], name_)
+        if self.hasContent_():
+            self.exportLiteralChildren(outfile, level, name_)
+    def exportLiteralAttributes(self, outfile, level, already_processed, name_):
+        pass
+    def exportLiteralChildren(self, outfile, level, name_):
+        if self.CountryCode is not None:
+            showIndent(outfile, level)
+            outfile.write('CountryCode=%s,\n' % quote_python(self.CountryCode).encode(ExternalEncoding))
+        if self.DefaultLanguageCode is not None:
+            showIndent(outfile, level)
+            outfile.write('DefaultLanguageCode=%s,\n' % quote_python(self.DefaultLanguageCode).encode(ExternalEncoding))
+        showIndent(outfile, level)
+        outfile.write('OtherLanguageCode=[\n')
+        level += 1
+        for OtherLanguageCode_ in self.OtherLanguageCode:
+            showIndent(outfile, level)
+            outfile.write('%s,\n' % quote_python(OtherLanguageCode_).encode(ExternalEncoding))
+        level -= 1
+        showIndent(outfile, level)
+        outfile.write('],\n')
+        if self.CurrencyCode is not None:
+            showIndent(outfile, level)
+            outfile.write('CurrencyCode=%s,\n' % quote_python(self.CurrencyCode).encode(ExternalEncoding))
+        if self.DefaultTimeZone is not None:
+            showIndent(outfile, level)
+            outfile.write('DefaultTimeZone=model_.TimeZonesType(\n')
+            self.DefaultTimeZone.exportLiteral(outfile, level, name_='DefaultTimeZone')
+            showIndent(outfile, level)
+            outfile.write('),\n')
+        showIndent(outfile, level)
+        outfile.write('OtherTimeZones=[\n')
+        level += 1
+        for OtherTimeZones_ in self.OtherTimeZones:
+            showIndent(outfile, level)
+            outfile.write('model_.TimeZonesType(\n')
+            OtherTimeZones_.exportLiteral(outfile, level, name_='TimeZonesType')
+            showIndent(outfile, level)
+            outfile.write('),\n')
+        level -= 1
+        showIndent(outfile, level)
+        outfile.write('],\n')
+        if self.RedirectURL is not None:
+            showIndent(outfile, level)
+            outfile.write('RedirectURL=%s,\n' % quote_python(self.RedirectURL).encode(ExternalEncoding))
+    def build(self, node):
+        self.buildAttributes(node, node.attrib, [])
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, node, nodeName_)
+    def buildAttributes(self, node, attrs, already_processed):
+        pass
+    def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
+        if nodeName_ == 'CountryCode':
+            CountryCode_ = child_.text
+            CountryCode_ = self.gds_validate_string(CountryCode_, node, 'CountryCode')
+            self.CountryCode = CountryCode_
+            self.validate_CountryName(self.CountryCode)    # validate type CountryName
+        elif nodeName_ == 'DefaultLanguageCode':
+            DefaultLanguageCode_ = child_.text
+            DefaultLanguageCode_ = self.gds_validate_string(DefaultLanguageCode_, node, 'DefaultLanguageCode')
+            self.DefaultLanguageCode = DefaultLanguageCode_
+            self.validate_LanguageCode(self.DefaultLanguageCode)    # validate type LanguageCode
+        elif nodeName_ == 'OtherLanguageCode':
+            OtherLanguageCode_ = child_.text
+            OtherLanguageCode_ = self.gds_validate_string(OtherLanguageCode_, node, 'OtherLanguageCode')
+            self.OtherLanguageCode.append(OtherLanguageCode_)
+            self.validate_LanguageCode(self.OtherLanguageCode)    # validate type LanguageCode
+        elif nodeName_ == 'CurrencyCode':
+            CurrencyCode_ = child_.text
+            CurrencyCode_ = self.gds_validate_string(CurrencyCode_, node, 'CurrencyCode')
+            self.CurrencyCode = CurrencyCode_
+            self.validate_CurrencyCode(self.CurrencyCode)    # validate type CurrencyCode
+        elif nodeName_ == 'DefaultTimeZone':
+            obj_ = TimeZonesType.factory()
+            obj_.build(child_)
+            self.set_DefaultTimeZone(obj_)
+        elif nodeName_ == 'OtherTimeZones':
+            obj_ = TimeZonesType.factory()
+            obj_.build(child_)
+            self.OtherTimeZones.append(obj_)
+        elif nodeName_ == 'RedirectURL':
+            RedirectURL_ = child_.text
+            RedirectURL_ = self.gds_validate_string(RedirectURL_, node, 'RedirectURL')
+            self.RedirectURL = RedirectURL_
+# end class CountryType
+
+
+class TimeZonesType(GeneratedsSuper):
+    subclass = None
+    superclass = None
+    def __init__(self, TimeZone=None, Offset=None):
+        self.TimeZone = TimeZone
+        self.Offset = Offset
+    def factory(*args_, **kwargs_):
+        if TimeZonesType.subclass:
+            return TimeZonesType.subclass(*args_, **kwargs_)
+        else:
+            return TimeZonesType(*args_, **kwargs_)
+    factory = staticmethod(factory)
+    def get_TimeZone(self): return self.TimeZone
+    def set_TimeZone(self, TimeZone): self.TimeZone = TimeZone
+    def validate_TimeZoneType(self, value):
+        # Validate type TimeZoneType, a restriction on xs:string.
+        pass
+    def get_Offset(self): return self.Offset
+    def set_Offset(self, Offset): self.Offset = Offset
+    def validate_OffsetType(self, value):
+        # Validate type OffsetType, a restriction on xs:string.
+        pass
+    def export(self, outfile, level, namespace_='', name_='TimeZonesType', namespacedef_=''):
+        showIndent(outfile, level)
+        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        already_processed = []
+        self.exportAttributes(outfile, level, already_processed, namespace_, name_='TimeZonesType')
+        if self.hasContent_():
+            outfile.write('>\n')
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            showIndent(outfile, level)
+            outfile.write('</%s%s>\n' % (namespace_, name_))
+        else:
+            outfile.write('/>\n')
+    def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='TimeZonesType'):
+        pass
+    def exportChildren(self, outfile, level, namespace_='', name_='TimeZonesType', fromsubclass_=False):
+        if self.TimeZone is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sTimeZone>%s</%sTimeZone>\n' % (namespace_, self.gds_format_string(quote_xml(self.TimeZone).encode(ExternalEncoding), input_name='TimeZone'), namespace_))
+        if self.Offset is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sOffset>%s</%sOffset>\n' % (namespace_, self.gds_format_string(quote_xml(self.Offset).encode(ExternalEncoding), input_name='Offset'), namespace_))
+    def hasContent_(self):
+        if (
+            self.TimeZone is not None or
+            self.Offset is not None
+            ):
+            return True
+        else:
+            return False
+    def exportLiteral(self, outfile, level, name_='TimeZonesType'):
+        level += 1
+        self.exportLiteralAttributes(outfile, level, [], name_)
+        if self.hasContent_():
+            self.exportLiteralChildren(outfile, level, name_)
+    def exportLiteralAttributes(self, outfile, level, already_processed, name_):
+        pass
+    def exportLiteralChildren(self, outfile, level, name_):
+        if self.TimeZone is not None:
+            showIndent(outfile, level)
+            outfile.write('TimeZone=%s,\n' % quote_python(self.TimeZone).encode(ExternalEncoding))
+        if self.Offset is not None:
+            showIndent(outfile, level)
+            outfile.write('Offset=%s,\n' % quote_python(self.Offset).encode(ExternalEncoding))
+    def build(self, node):
+        self.buildAttributes(node, node.attrib, [])
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, node, nodeName_)
+    def buildAttributes(self, node, attrs, already_processed):
+        pass
+    def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
+        if nodeName_ == 'TimeZone':
+            TimeZone_ = child_.text
+            TimeZone_ = self.gds_validate_string(TimeZone_, node, 'TimeZone')
+            self.TimeZone = TimeZone_
+            self.validate_TimeZoneType(self.TimeZone)    # validate type TimeZoneType
+        elif nodeName_ == 'Offset':
+            Offset_ = child_.text
+            Offset_ = self.gds_validate_string(Offset_, node, 'Offset')
+            self.Offset = Offset_
+            self.validate_OffsetType(self.Offset)    # validate type OffsetType
+# end class TimeZonesType
+
+
 USAGE_TEXT = """
 Usage: python <Parser>.py [ -s ] <in_xml_file>
 """
@@ -4116,5 +4389,7 @@ __all__ = [
     "CommunicationChannelDetailsType",
     "ConsumerDetailsType",
     "UnsubscribePreferenceType",
-    "UnsubscribePreferencesType"
+    "UnsubscribePreferencesType",
+    "CountryType",
+    "TimeZonesType"
     ]
