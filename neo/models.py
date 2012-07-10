@@ -8,7 +8,7 @@ from foundry.models import Member
 
 from neo import api
 from neo.xml import Consumer, ConsumerProfileType, PreferencesType, UserAccountType, \
-    EmailDetailsType, PhoneDetailsType, AnswerType
+    EmailDetailsType, PhoneDetailsType, AnswerType, CategoryType
 
 
 class NeoProfile(models.Model):
@@ -69,9 +69,15 @@ def create_consumer(sender, **kwargs):
             }))
             
         # create consumer preferences
-        preferences = PreferencesType({
-            
-        })
+        preferences = PreferencesType()
+        q_general = CategoryType({'CategoryID': 4}) # 4 - general
+        q_general.add_QuestionAnswers(QuestionAnswerType({
+            'QuestionID': 92, # which country?
+            'Answer': ['ZA']
+        }))
+        
+        preferences.add_QuestionCategory(q_general)
+        
         # create consumer account details
         account = UserAccountType({
         })
