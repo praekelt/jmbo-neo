@@ -4,7 +4,11 @@ from django.contrib.auth.signals import user_logged_out
 from django.db.models import signals
 from django.dispatch import receiver
 
-from neo.api import logout as logout_neo
+from foundry.models import Member
+
+from neo import api
+from neo.xml import Consumer, ConsumerProfileType, PreferencesType, UserAccountType, \
+    EmailDetailsType, PhoneDetailsType, AnswerType
 
 
 class NeoProfile(models.Model):
@@ -17,7 +21,7 @@ class NeoProfile(models.Model):
 def notify_logout(sender, **kwargs):
     try:
         neo_profile = NeoProfile.objects.get(user=kwargs['user'])
-        logout_neo(neo_profile.consumer_id)
+        api.logout(neo_profile.consumer_id)
     except NeoProfile.DoesNotExist:
         pass # figure out something to do here
 
@@ -27,3 +31,58 @@ def notify_logout(sender, **kwargs):
 # EmailDetailsType
 # AddressDetailsType
 # PhoneDetailsType
+
+
+@receiver(signals.post_save)
+def create_consumer(sender, **kwargs):
+    if issubclass(sender, Member) and kwargs['created']:
+        instance = kwargs['instance']
+        # for registration ConsumerProfile, Preferences and UserAccount are mandatory
+        
+        # create consumer profile
+        # NB. These ConsumerProfileType attributes must be required during registration for any Neo app
+        profile = ConsumerProfileType({
+            'Title': '',
+            'FirstName': instance.first_name,
+            'LastName': instance.last_name,
+            'DOB': instance.dob.strftime("%Y-%m-%d"),
+            'PromoCode': 'testPromo',
+        })
+        if getattr(instance, 'mobile_number', False):
+            profile.add_Email(EmailDetailsType({
+                'EmailId': instance.mobile_number,
+                'EmailCategory': 3,
+                'IsDefaultFlag': 1,
+                'ModifyFlag': 'I'
+            }))
+            profile.add_Phone(PhoneDetailsType({
+                'PhoneNumber': instance.mobile_number,
+                'PhoneType': 3,
+                'ModifyFlag': 'I'
+            }))
+        if getattr(instance, 'email', False):
+            profile.add_Email(EmailDetailsType({
+                'EmailId': instance.email,
+                'EmailCategory': 1,
+                'IsDefaultFlag': (0 if len(email) > 0 else 1),
+                'ModifyFlag': 'I'
+            }))
+            
+        # create consumer preferences
+        preferences = PreferencesType({
+            
+        })
+        # create consumer account details
+        account = UserAccountType({
+        })
+        # create optional consumer attributes
+        
+        # create the consumer
+        consumer = Consumer({
+            'ConsumerProfile': profile,
+            'Preferences': preferences,
+            'UserAccount': account
+        })
+        consumer_id = api.create_consumer(consumer)
+        
+            

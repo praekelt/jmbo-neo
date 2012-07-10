@@ -27,6 +27,11 @@ BASE_URL = "http://%s:%s/neowebservices/%s/%s" % (
 requests.defaults.safe_mode = True
 
 
+# the Neo exception that should be raised if a Neo communication fails
+class NeoError(Exception):
+    pass
+
+
 # authenticates using either username/password or a remember me token
 def authenticate(username=None, password=None, token=None, acq_src=None):
     params = {'promocode': CONFIG['PROMO_CODE']}
