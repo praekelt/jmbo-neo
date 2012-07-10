@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+
+	<xs:element name="LoginDetails">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ConsumerID" type="ConsumerIDType" minOccurs="1" maxOccurs="1"></xs:element>
+                <xs:element name="LoginName" type="LoginName" minOccurs="1" maxOccurs="1"></xs:element>
+                <xs:element name="LastLoginSuccess" type="LoginSuccessFlagType" minOccurs="0" maxOccurs="1"></xs:element>
+				<xs:element name="LastLoginTime" type="LoginTimeType" minOccurs="0" maxOccurs="1"></xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

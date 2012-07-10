@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+	<xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+
+	<xs:include schemaLocation="Email.xsd"></xs:include>
+	<xs:element name="ProfanityCheck" type="ProfanityCheckType">
+
+	</xs:element>
+
+	<xs:complexType name="ProfanityCheckType">
+		<xs:sequence>
+			<xs:element name="Locale" type="LocaleCode" minOccurs="1"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="Language" type="LanguageCode" minOccurs="1"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="EmailBody" type="EmailBody" minOccurs="1"
+				maxOccurs="1">
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+
+
+
+
+
+</xs:schema>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+	<xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+	<xs:element name="ConsumerIDs" type="ConsumerIDAndApplicationsType"></xs:element>
+
+	<xs:complexType name="ConsumerIDAndApplicationsType">
+		<xs:sequence>
+			<xs:element name="Consumer" type="ConsumerIDAndApplicationType"
+				minOccurs="1" maxOccurs="unbounded">
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:complexType name="ConsumerIDAndApplicationType">
+		<xs:sequence>
+			<xs:element name="ConsumerID" type="ConsumerIDType" minOccurs="1" maxOccurs="1"></xs:element>
+			<xs:element name="LoginName" type="LoginName" minOccurs="1" maxOccurs="1"></xs:element>
+			<xs:element name="ApplicationName" type="ApplicationNameType" minOccurs="0" maxOccurs="1"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

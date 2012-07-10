@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+
+	<xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+	<xs:element name="ConsumerProfile" type="ConsumerProfileType">
+
+	</xs:element>
+
+	<xs:complexType name="AddressDetailsType">
+		
+		<xs:sequence>
+            <xs:element name="AddressID" type="xs:long" minOccurs="0" maxOccurs="1"></xs:element>
+            <xs:element name="Address1" type="Address1"
+				nillable="true" minOccurs="1" maxOccurs="1">
+				
+			</xs:element>
+			<xs:element name="Address2" type="Address2" nillable="true" minOccurs="0" maxOccurs="1">
+				
+			</xs:element>
+			
+			<xs:element name="Address3" type="Address3" nillable="true" minOccurs="0" maxOccurs="1">
+			</xs:element>
+			
+			<xs:element name="Address4" type="Address4" nillable="true" minOccurs="0" maxOccurs="1">
+			</xs:element>
+			
+			<xs:element name="City" type="CityName" nillable="true"
+				minOccurs="0" maxOccurs="1">
+				
+			</xs:element>
+			<xs:element name="State" type="StateName" minOccurs="0"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="Country" type="CountryName"
+				minOccurs="1" maxOccurs="1">
+			</xs:element>
+			<xs:element name="ZipCode" type="ZipCode" nillable="true"
+				minOccurs="0" maxOccurs="1">
+				
+			</xs:element>
+			<xs:element name="AddressType" type="AddressType"
+				nillable="true" minOccurs="1" maxOccurs="1">
+				
+			</xs:element>
+			<xs:element name="StateOther" type="StateName"
+				nillable="true" minOccurs="0" maxOccurs="1">
+				
+			</xs:element>
+
+			<xs:element name="ModifyFlag" type="xs:string" minOccurs="1" maxOccurs="1"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:complexType name="ConsumerProfileType">
+		
+		<xs:sequence>
+			<xs:element name="Title" type="Title" nillable="true"
+				minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="FirstName" type="FirstName"
+				nillable="true" minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="LastName" type="LastName" nillable="true"
+				minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="AlternateFirstName" type="FirstName"
+				minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="AlternateLastName" type="LastName"
+				minOccurs="0" maxOccurs="1">
+			</xs:element>
+			
+			<xs:element name="DOB" type="Date" nillable="true"
+				minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="Gender" type="Gender" nillable="true"
+				minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="MaritalStatus" type="MaritalStatus"
+				nillable="true" minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="NationalID" type="NationalID"
+				nillable="true" minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="PassportNumber" type="PassportNumber"
+				nillable="true" minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="Education" type="Education"
+				nillable="true" minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="Profession" type="Profession"
+				nillable="true" minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="Suffix" type="Suffix" minOccurs="0"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="Company" type="Company" nillable="true"
+				minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+			<xs:element name="MiddleName" type="MiddleName"
+				nillable="true" minOccurs="0" maxOccurs="1">
+
+			</xs:element>
+            <xs:element name="AlternateMiddleName" type="MiddleName" minOccurs="0" maxOccurs="1"></xs:element>
+            
+            <xs:element name="MaternalLastName" type="LastName"
+				nillable="true" minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="AlternateMaternalLastName" type="LastName"
+				nillable="true" minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="AlternateTitle" type="Title" nillable="true"
+				minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="AlternateSuffix" type="Suffix"
+				nillable="true" minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="Address" type="AddressDetailsType"
+				minOccurs="0" maxOccurs="unbounded">
+			</xs:element>
+			<xs:element name="Phone" type="PhoneDetailsType"
+				minOccurs="0" maxOccurs="unbounded">
+			</xs:element>
+			<xs:element name="PromoCode" type="PromoCodeDesc"
+				minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="AcquisitionSource" type="AcquisitionSourceType"
+				minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="Email" type="EmailDetailsType"
+				minOccurs="0" maxOccurs="unbounded">
+			</xs:element>
+
+		</xs:sequence>
+	</xs:complexType>
+
+
+	<xs:complexType name="PhoneDetailsType">
+		<xs:sequence>
+			<xs:element name="PhoneID" type="xs:long" minOccurs="0"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="InternationalCode" type="AreaCode"
+				minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="AreaCode" type="AreaCode" minOccurs="0"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="PhoneNumber" type="PhoneNumber"
+				minOccurs="1" maxOccurs="1">
+			</xs:element>
+			<xs:element name="PhoneType" type="PhoneType"
+				minOccurs="1" maxOccurs="1">
+			</xs:element>
+			<xs:element name="Extension" type="AreaCode" minOccurs="0"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="ModifyFlag" type="xs:string" minOccurs="1" maxOccurs="1">
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+
+	
+</xs:schema>
