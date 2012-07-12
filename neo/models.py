@@ -122,7 +122,7 @@ def create_consumer(sender, **kwargs):
             consumer_id = api.create_consumer(consumer)
             neo_profile = NeoProfile(user=inst, consumer_id=consumer_id)
             neo_profile.save()
-        except NeoError:
+        except api.NeoError:
             pass
         
             
