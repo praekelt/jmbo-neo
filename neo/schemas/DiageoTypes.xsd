@@ -4,7 +4,8 @@
 		<xs:restriction base="xs:byte">
 			<xs:fractionDigits value="0"/>
 		</xs:restriction>
-	</xs:simpleType>	<xs:simpleType name="AreaCode">
+	</xs:simpleType>
+	<xs:simpleType name="AreaCode">
 		<xs:restriction base="Name">
 			<xs:maxLength value="10" />
 		</xs:restriction>
@@ -104,7 +105,17 @@
 	
 	<xs:simpleType name="Gender">
 		<xs:restriction base="Flag"/>
-	</xs:simpleType>	<xs:simpleType name="LastName">		<xs:restriction base="Name">			<xs:maxLength value="50" />		</xs:restriction>	</xs:simpleType>	<xs:simpleType name="LoginName">
+	</xs:simpleType>
+
+	<xs:simpleType name="LastName">
+		<xs:restriction base="Name">
+			<xs:maxLength value="50" />
+		</xs:restriction>
+	</xs:simpleType>
+
+
+
+	<xs:simpleType name="LoginName">
 		<xs:restriction base="Name">
 			<xs:maxLength value="70" />
 		</xs:restriction>
@@ -229,7 +240,8 @@
 
 
 	<xs:complexType name="AnswerType">		
-		<xs:sequence>			<xs:element name="OptionID" type="xs:long" minOccurs="0" maxOccurs="1"></xs:element>
+		<xs:sequence>
+			<xs:element name="OptionID" type="xs:long" minOccurs="0" maxOccurs="1"></xs:element>
 			<xs:element name="ModifyFlag" type="ModifyFlag"	minOccurs="1" maxOccurs="1"></xs:element>			
 			<xs:element name="BrandID" type="BrandID" minOccurs="0"	maxOccurs="1"></xs:element>
 			<xs:element name="DrinkCategoryID" type="DrinkCategoryID" minOccurs="0" maxOccurs="1"></xs:element>

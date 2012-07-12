@@ -33,8 +33,8 @@ class NeoError(Exception):
 
 
 # authenticates using either username/password or a remember me token
-def authenticate(username=None, password=None, token=None, acq_src=None):
-    params = {'promocode': CONFIG['PROMO_CODE']}
+def authenticate(username=None, password=None, token=None, promo_code=None, acq_src=None):
+    params = {'promocode': promo_code if promo_code else CONFIG['PROMO_CODE']}
     if not token:
         params['loginname'] = username
         params['password'] = password
@@ -51,8 +51,8 @@ def authenticate(username=None, password=None, token=None, acq_src=None):
 
 
 # logs the consumer out on Neo server
-def logout(consumer_id, acq_src=None):
-    params = {'promocode': CONFIG['PROMO_CODE']}
+def logout(consumer_id, promo_code=None, acq_src=None):
+    params = {'promocode': promo_code if promo_code else CONFIG['PROMO_CODE']}
     if acq_src:
         params['acquisitionsource'] = acq_src
     response = requests.put("%s/consumers/%s/useraccount/notifylogout" % (BASE_URL, consumer_id),
@@ -110,11 +110,11 @@ def get_consumers(email_id, dob):
 
 
 # links a consumer account from another app with this app
-def link_consumer(consumer_id, username, password, acq_src=None):
+def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None):
     params = {
         'loginname': username,
         'password': password,
-        'promocode': CONFIG['PROMO_CODE']
+        'promocode': promo_code if promo_code else CONFIG['PROMO_CODE']
     }
     if acq_src:
         params['acquisitionsource'] = acq_src
