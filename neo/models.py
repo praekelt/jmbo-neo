@@ -127,6 +127,7 @@ def create_consumer(sender, **kwargs):
             neo_profile.save()
         except api.NeoError:
             pass
+
     else:
         # update changed attributes
         pass
@@ -149,7 +150,7 @@ def load_consumer(sender, **kwargs):
         cache_key = 'neo_consumer_%s' % pk
         member = cache.get(cache_key, None)
         if member is None:
-            consumer_id = NeoProfile.objects.get(user_pk=pk).consumer_id
+            consumer_id = NeoProfile.objects.get(user=pk).consumer_id
             # retrieve member attributes from Neo
             consumer = api.get_consumer(consumer_id)
             email = None
