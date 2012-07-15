@@ -23,6 +23,144 @@ class NeoProfile(models.Model):
     consumer_id = models.PositiveIntegerField(primary_key=True)
 
 
+# the member attributes that are stored on Neo and in memcached
+from_neo = ('username', 'password', 'first_name', \
+    'last_name', 'dob', 'email', 'mobile_number', \
+    'receive_sms', 'receive_email', 'country')
+
+
+# a wrapper class that makes it easier to manage a consumer object
+class ConsumerWrapper(object):
+    
+    def __init__(self, consumer=None):
+        if consumer is None:
+            self._consumer = Consumer()
+        else:
+            self._consumer = consumer
+    
+    def _get_or_create_profile(self):
+        if self._consumer.ConsumerProfile is None:
+            self._consumer.ConsumerProfile = ConsumerProfileType()
+        return self._consumer.ConsumerProfile
+
+    def _get_or_create_account(self):
+        if self._consumer.UserAccount is None:
+            self._consumer.UserAccount = UserAccountType()
+        return self._consumer.UserAccount
+
+    def _get_or_create_preferences(self):
+        if self._consumer.Preferences is None:
+            self._consumer.Preferences = PreferencesType()
+        return self._consumer.Preferences
+    
+    def _check_preference(self, category_id, question_id):
+        if self._consumer.Preferences is not None:
+            for cat in self._consumer.Preferences.QuestionCategory:
+                if cat.CategoryID == category_id:
+                    for q in cat.QuestionAnswers:
+                        if q.QuestionID == question_id:
+                            return q.Answer
+        return None
+        
+    def _check_opt_in(self, question_id, comm_channel):
+        # 1 - opt in category
+        answers = self._check_preference(1, question_id)
+        if answers is not None:
+            for a in answers:
+                if a.CommunicationChannel == comm_channel:
+                    return a.OptionID == 1
+        return None
+    
+    @property
+    def consumer(self):
+        return self._consumer
+    
+    @property
+    def receive_sms(self):
+        # 64 - receive communication from brand via communication channel?
+        # 4 - sms communication channel
+        return self._check_opt_in(64, 4)
+    
+    @property
+    def receive_email(self):
+        # 64 - receive communication from brand via communication channel?
+        # 1 - email communication channel
+        return self._check_opt_in(64, 1)
+    
+    @property
+    def country(self):
+        # 4 - general category
+        # 92 - country of residence?
+        answers = self._check_preference(4, 92)
+        if answers is not None:;
+            country = answers[0].OptionID
+            for code, option_id in country_option_id.iteritems():
+                if option_id == country:
+                    country = Country.objects.get(country_code=code)
+                    return country
+        return None
+        
+    @property
+    def dob(self):
+        if self._consumer.ConsumerProfile is not None and \
+            self._consumer.ConsumerProfile.DOB is not None:
+            return datetime.strptime(self._consumer.ConsumerProfile.DOB, "%Y-%m-%d")
+        return None
+    
+    @property
+    def email(self):
+        if self._consumer.ConsumerProfile is not None:
+            for email in self._consumer.ConsumerProfile.Email:
+                if email.EmailCategory == 1:
+                    return email.EmailId
+        return None
+    
+    @property
+    def mobile_number(self):
+        if self._consumer.ConsumerProfile is not None:
+            for phone in self._consumer.ConsumerProfile.Phone:
+                if phone.PhoneType == 3:
+                    return phone.PhoneNumber
+        return None
+    
+    @property
+    def first_name(self):
+        if self._consumer.ConsumerProfile is not None:
+            return self._consumer.ConsumerProfile.FirstName
+        return None
+    
+    @property
+    def last_name(self)
+        if self._consumer.ConsumerProfile is not None:
+            return self._consumer.ConsumerProfile.LastName
+        return None
+    
+    @property
+    def username(self):
+        if self._consumer.UserAccount is not None:
+            return self._consumer.UserAccount.LoginName
+        return None
+
+    @property
+    def password(self):
+        if self._consumer.UserAccount is not None:
+            return self._consumer.UserAccount.Password
+        return None
+        
+    def _set_property(self, obj, value, mod_flag='I'):
+        pass
+    
+    def _set_preference(self):
+        pass
+    
+    def set_receive_sms(self, value, mod_flag='I'):
+        preferences = _get_or_create_preferences()
+        val = self.receive_sms
+        if val is None:
+            pass
+        # figure this one out
+
+
 @receiver(user_logged_out)
 def notify_logout(sender, **kwargs):
     try:
@@ -42,6 +180,11 @@ def notify_logout(sender, **kwargs):
 @receiver(signals.post_save, sender=Member)
 def create_consumer(sender, **kwargs):
     member = kwargs['instance']
+    cache_key = 'neo_consumer_%s' % member.pk
+    # the member attributes that are stored on Neo and in memcached
+    from_neo = ('username', 'password', 'first_name', \
+        'last_name', 'dob', 'email', 'mobile_number', \
+        'receive_sms', 'receive_email', 'country')
     if kwargs['created']:
         brand_id = getattr(settings, 'NEO', {'BRAND_ID': 35})['BRAND_ID']
         promo_code = getattr(settings, 'NEO', {'PROMO_CODE': 'testPromo'})['PROMO_CODE']
@@ -130,13 +273,15 @@ def create_consumer(sender, **kwargs):
 
     else:
         # update changed attributes
-        pass
+        old_member = cache.get(cache_key, None)
+        if old_member is not None:  # it should never be None
+            for k in from_neo:
+                # check if cached version and current version of member differ
+                if getattr(member, k, None) != old_member.get(k, None):
+                    # update attribute on Neo
+                    pass
     
     # cache this member after it is saved (thus created successfully)
-    from_neo = ('username', 'password', 'first_name', \
-        'last_name', 'dob', 'email', 'mobile_number', \
-        'receive_sms', 'receive_email', 'country')
-    cache_key = 'neo_consumer_%s' % member.pk
     cache.set(cache_key, dict((k, getattr(member, k, None)) \
         for k in from_neo), 1200)
 
