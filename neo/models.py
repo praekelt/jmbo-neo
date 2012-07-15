@@ -275,16 +275,8 @@ def create_consumer(sender, **kwargs):
         # create consumer
         # NB. These attributes must be required during registration for any Neo app
         wrapper = ConsumerWrapper()
-        wrapper.set_first_name(member.first_name)
-        wrapper.set_last_name(member.last_name)
-        wrapper.set_dob(member.dob)
-        wrapper.set_email(member.email)
-        wrapper.set_mobile_number(member.mobile_number)
-        wrapper.set_receive_email(member.receive_email)
-        wrapper.set_receive_sms(member.receive_sms)
-        wrapper.set_country(member.country)
-        wrapper.set_username(member.username)
-        wrapper.set_password(member.password)
+        for a in NEO_ATTR:
+            getattr(wrapper, "set_%s" % a)(getattr(member, a))
         try:
             consumer_id = api.create_consumer(wrapper.consumer)
             neo_profile = NeoProfile(user=member, consumer_id=consumer_id)
