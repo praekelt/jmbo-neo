@@ -15,6 +15,7 @@ CONFIG = getattr(settings, 'NEO', {
     'APP_ID': '1',
     'VERSION_ID': '1.3',
     'PROMO_CODE': 'testPromo',
+    'BRAND_ID': 35,
 })
 # the base url for Neo services
 BASE_URL = "http://%s:%s/neowebservices/%s/%s" % (

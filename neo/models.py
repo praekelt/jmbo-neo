@@ -24,9 +24,13 @@ class NeoProfile(models.Model):
 
 
 # the member attributes that are stored on Neo and in memcached
-from_neo = ('username', 'password', 'first_name', \
+NEO_ATTR = ('username', 'password', 'first_name', \
     'last_name', 'dob', 'email', 'mobile_number', \
     'receive_sms', 'receive_email', 'country')
+
+# retrieve the brand id and promo code for the website
+BRAND_ID = getattr(settings, 'NEO', {'BRAND_ID': 35})['BRAND_ID']
+PROMO_CODE = getattr(settings, 'NEO', {'PROMO_CODE': 'testPromo'})['PROMO_CODE']
 
 
 # a wrapper class that makes it easier to manage a consumer object
@@ -34,18 +38,20 @@ class ConsumerWrapper(object):
     
     def __init__(self, consumer=None):
         if consumer is None:
-            self._consumer = Consumer()
+            self._consumer = Consumer(PromoCode=PROMO_CODE)
         else:
             self._consumer = consumer
     
     def _get_or_create_profile(self):
         if self._consumer.ConsumerProfile is None:
-            self._consumer.ConsumerProfile = ConsumerProfileType()
+            # Neo requires a title but Jmbo members don't have titles
+            self._consumer.ConsumerProfile = ConsumerProfileType(Title='')
         return self._consumer.ConsumerProfile
 
     def _get_or_create_account(self):
         if self._consumer.UserAccount is None:
             self._consumer.UserAccount = UserAccountType()
+            self._consumer.UserAccount.LoginCredentials = LoginCredentialsType()
         return self._consumer.UserAccount
 
     def _get_or_create_preferences(self):
@@ -53,7 +59,7 @@ class ConsumerWrapper(object):
             self._consumer.Preferences = PreferencesType()
         return self._consumer.Preferences
     
-    def _check_preference(self, category_id, question_id):
+    def _get_preference(self, category_id, question_id):
         if self._consumer.Preferences is not None:
             for cat in self._consumer.Preferences.QuestionCategory:
                 if cat.CategoryID == category_id:
@@ -62,15 +68,43 @@ class ConsumerWrapper(object):
                             return q.Answer
         return None
         
-    def _check_opt_in(self, question_id, comm_channel):
+    def _get_opt_in(self, question_id, brand_id, comm_channel):
         # 1 - opt in category
-        answers = self._check_preference(1, question_id)
+        answers = self._get_preference(1, question_id)
         if answers is not None:
             for a in answers:
                 if a.CommunicationChannel == comm_channel:
                     return a.OptionID == 1
         return None
     
+    def _set_preference(self, answer, category_id, question_id, mod_flag):
+        prefs = self._get_or_create_preferences()
+        answer.ModifyFlag = mod_flag
+        for cat in prefs.QuestionCategory:
+            if cat.CategoryID == category_id:
+                for q in cat.QuestionAnswers:
+                    if q.QuestionID == question_id:
+                        q.add_Answer(answer)
+        
+    
+    def _set_opt_in(self, value, question_id, brand_id, comm_channel, mod_flag):
+        answers = self._get_preference(1, question_id)
+        updated = False
+        if answers is not None:
+            for a in answers:
+                if a.BrandID == brand_id and a.CommunicationChannel == comm_channel:
+                    a.OptionID = 1 if value else 2
+                    a.ModifyFlag = mod_flag
+                    updated = True
+                    break
+        if not updated:
+            answer = AnswerType(
+                OptionID=(1 if value else 2),
+                BrandID=brand_id,
+                CommunicationChannel=comm_channel
+            )
+            self._set_preference(answer, 1, question_id, mod_flag)
+            
     @property
     def consumer(self):
         return self._consumer
@@ -79,20 +113,20 @@ class ConsumerWrapper(object):
     def receive_sms(self):
         # 64 - receive communication from brand via communication channel?
         # 4 - sms communication channel
-        return self._check_opt_in(64, 4)
+        return self._get_opt_in(64, BRAND_ID, 4)
     
     @property
     def receive_email(self):
         # 64 - receive communication from brand via communication channel?
         # 1 - email communication channel
-        return self._check_opt_in(64, 1)
+        return self._get_opt_in(64, BRAND_ID, 1)
     
     @property
     def country(self):
         # 4 - general category
         # 92 - country of residence?
-        answers = self._check_preference(4, 92)
-        if answers is not None:;
+        answers = self._get_preference(4, 92)
+        if answers is not None:
             country = answers[0].OptionID
             for code, option_id in country_option_id.iteritems():
                 if option_id == country:
@@ -130,7 +164,7 @@ class ConsumerWrapper(object):
         return None
     
     @property
-    def last_name(self)
+    def last_name(self):
         if self._consumer.ConsumerProfile is not None:
             return self._consumer.ConsumerProfile.LastName
         return None
@@ -138,29 +172,92 @@ class ConsumerWrapper(object):
     @property
     def username(self):
         if self._consumer.UserAccount is not None:
-            return self._consumer.UserAccount.LoginName
+            return self._consumer.UserAccount.LoginCredentials.LoginName
         return None
 
     @property
     def password(self):
         if self._consumer.UserAccount is not None:
-            return self._consumer.UserAccount.Password
-        return None
-        
-    def _set_property(self, obj, value, mod_flag='I'):
-        pass
-    
-    def _set_preference(self):
-        pass
+            return self._consumer.UserAccount.LoginCredentials.Password
+        return None  
     
     def set_receive_sms(self, value, mod_flag='I'):
-        preferences = _get_or_create_preferences()
-        val = self.receive_sms
-        if val is None:
-            pass
-        # figure this one out
+        if value is not None:
+            self._set_opt_in(value, 64, BRAND_ID, 4, mod_flag)
+    
+    def set_receive_email(self, value, mod_flag='I'):
+        if value is not None:
+            self._set_opt_in(value, 64, BRAND_ID, 1, mod_flag)
 
+    def set_country(self, country, mod_flag='I'):
+        if country is not None:
+            answers = self._get_preference(4, 92)
+            if answers is not None:
+                answers[0].OptionID = country_option_id[country.country_code]
+                answers[0].ModifyFlag = mod_flag
+            else:
+                answer = AnswerType(OptionID=country_option_id[country.country_code])
+                self._set_preference(answer, 4, 92, mod_flag)
+    
+    def set_dob(self, dob, mod_flag='I'):
+        if dob is not None:
+            self._get_or_create_profile().DOB = dob.strftime("%Y-%m-%d")
+    
+    def set_first_name(self, first_name, mod_flag='I'):
+        self._get_or_create_profile().FirstName = first_name
+    
+    def set_last_name(self, last_name, mod_flag='I'):
+        self._get_or_create_profile().LastName = last_name
+    
+    def set_username(self, username, mod_flag='I'):
+        self._get_or_create_account().LoginCredentials.LoginName = username
+        
+    def set_password(self, password, mod_flag='I'):
+        self._get_or_create_account().LoginCredentials.Password = password
+        
+    def set_email(self, email, mod_flag='I'):
+        if email is not None:
+            prof = self._get_or_create_profile()
+            updated = False
+            for email in prof.Email:
+                if email.EmailCategory == 1:
+                    email.EmailId = email
+                    email.ModifyFlag = mod_flag
+                    updated = True
+                    break
+            if not updated:
+                prof.add_Email(EmailDetailsType(
+                    EmailId=email,
+                    EmailCategory=1,
+                    IsDefaultFlag=(0 if len(prof.Email) > 0 else 1),
+                    ModifyFlag=mod_flag
+                ))
 
+    def set_mobile_number(self, mobile_number, mod_flag='I'):
+        if mobile_number is not None:
+            prof = self._get_or_create_profile()
+            if len(prof.Phone) == 0:
+                prof.add_Phone(PhoneDetailsType(
+                    PhoneNumber=mobile_number,
+                    PhoneType=3,
+                    ModifyFlag=mod_flag
+                ))
+                prof.add_Email(EmailDetailsType(
+                    EmailId=mobile_number,
+                    EmailCategory=3,
+                    IsDefaultFlag=(0 if len(prof.Email) > 0 else 1),
+                    ModifyFlag=mod_flag
+                ))
+            else:
+                prof.Phone[0].PhoneNumber = mobile_number
+                prof.Phone[0].ModifyFlag = mod_flag
+                for email in prof.Email:
+                    if email.EmailCategory == 3:
+                        email.EmailId = email
+                        email.ModifyFlag = mod_flag
+                        break
+
+                    
 @receiver(user_logged_out)
 def notify_logout(sender, **kwargs):
     try:
@@ -170,102 +267,26 @@ def notify_logout(sender, **kwargs):
         pass # figure out something to do here
 
 
-# ModifyFlag needs to be set to one of I (insert), U (update) and D (delete) for the following:
-# AnswerType
-# EmailDetailsType
-# AddressDetailsType
-# PhoneDetailsType
-
-
 @receiver(signals.post_save, sender=Member)
 def create_consumer(sender, **kwargs):
     member = kwargs['instance']
     cache_key = 'neo_consumer_%s' % member.pk
-    # the member attributes that are stored on Neo and in memcached
-    from_neo = ('username', 'password', 'first_name', \
-        'last_name', 'dob', 'email', 'mobile_number', \
-        'receive_sms', 'receive_email', 'country')
     if kwargs['created']:
-        brand_id = getattr(settings, 'NEO', {'BRAND_ID': 35})['BRAND_ID']
-        promo_code = getattr(settings, 'NEO', {'PROMO_CODE': 'testPromo'})['PROMO_CODE']
-        # for registration ConsumerProfile, Preferences and UserAccount are mandatory
-        
-        # create consumer profile
-        # NB. These ConsumerProfileType attributes must be required during registration for any Neo app
-        profile = ConsumerProfileType(
-            Title='',
-            FirstName=member.first_name,
-            LastName=member.last_name,
-            DOB=member.dob.strftime("%Y-%m-%d"),
-            PromoCode=promo_code,
-        )
-        if getattr(member, 'mobile_number', False):
-            profile.add_Email(EmailDetailsType(
-                EmailId=member.mobile_number,
-                EmailCategory=3,
-                IsDefaultFlag=1,
-                ModifyFlag='I'
-            ))
-            profile.add_Phone(PhoneDetailsType(
-                PhoneNumber=member.mobile_number,
-                PhoneType=3,
-                ModifyFlag='I'
-            ))
-        if getattr(member, 'email', False):
-            profile.add_Email(EmailDetailsType(
-                EmailId=member.email,
-                EmailCategory=1,
-                IsDefaultFlag=(0 if len(profile.Email) > 0 else 1),
-                ModifyFlag='I'
-            ))
-            
-        # create consumer preferences
-        preferences = PreferencesType()
-        q_general = CategoryType(CategoryID=4)  # 4 - general
-        q_general.add_QuestionAnswers(QuestionAnswerType(
-            QuestionID=92,  # which country?
-            Answer=[AnswerType(
-                ModifyFlag='I',
-                OptionID=country_option_id[member.country.country_code] \
-                    if member.country.country_code in country_option_id else 253,  # 253 - unknown country
-            ), ]
-        ))
-        q_optin = CategoryType(CategoryID=1)  # 1 - opt in
-        q_optin.add_QuestionAnswers(QuestionAnswerType(
-            QuestionID=64,  # receive communication from brand via communication channel?
-            Answer=[AnswerType(
-                ModifyFlag='I',
-                OptionID=1 if member.receive_sms else 2,
-                BrandID=brand_id,
-                CommunicationChannel=4,  # 4 - sms channel
-            ),
-            AnswerType(
-                ModifyFlag='I',
-                OptionID=1 if member.receive_email else 2,
-                BrandID=brand_id,
-                CommunicationChannel=1,  # 1 - email channel
-            )]
-        ))
-        
-        preferences.add_QuestionCategory(q_general)
-        preferences.add_QuestionCategory(q_optin)
-        
-        # create consumer account details
-        account = UserAccountType(
-            LoginCredentialsType(
-                LoginName=member.username,
-                Password=member.password
-            )
-        )
-        
-        # create the consumer
-        consumer = Consumer(
-            ConsumerProfile=profile,
-            Preferences=preferences,
-            UserAccount=account
-        )
+        # create consumer
+        # NB. These attributes must be required during registration for any Neo app
+        wrapper = ConsumerWrapper()
+        wrapper.set_first_name(member.first_name)
+        wrapper.set_last_name(member.last_name)
+        wrapper.set_dob(member.dob)
+        wrapper.set_email(member.email)
+        wrapper.set_mobile_number(member.mobile_number)
+        wrapper.set_receive_email(member.receive_email)
+        wrapper.set_receive_sms(member.receive_sms)
+        wrapper.set_country(member.country)
+        wrapper.set_username(member.username)
+        wrapper.set_password(member.password)
         try:
-            consumer_id = api.create_consumer(consumer)
+            consumer_id = api.create_consumer(wrapper.consumer)
             neo_profile = NeoProfile(user=member, consumer_id=consumer_id)
             neo_profile.save()
         except api.NeoError:
@@ -274,16 +295,29 @@ def create_consumer(sender, **kwargs):
     else:
         # update changed attributes
         old_member = cache.get(cache_key, None)
+        wrapper = ConsumerWrapper()
         if old_member is not None:  # it should never be None
-            for k in from_neo:
-                # check if cached version and current version of member differ
-                if getattr(member, k, None) != old_member.get(k, None):
+            for k in NEO_ATTR:
+                # check where cached version and current version of member differ
+                current = getattr(member, k, None)
+                old = old_member.get(k, None)
+                if current != old:
                     # update attribute on Neo
-                    pass
-    
-    # cache this member after it is saved (thus created successfully)
+                    if old is None:
+                        getattr(wrapper, "set_%s" % k)(current, mod_flag='I')  # insert
+                    elif current is None:
+                        getattr(wrapper, "set_%s" % k)(old, mod_flag='D')  # delete
+                    else:
+                        getattr(wrapper, "set_%s" % k)(current, mod_flag='U')  # update
+        try:
+            consumer_id = NeoProfile.objects.get(user=member)
+            api.update_consumer(consumer_id, wrapper.consumer)
+        except api.NeoError:
+            pass
+                    
+    # cache this member after it is saved (thus created/updated successfully)
     cache.set(cache_key, dict((k, getattr(member, k, None)) \
-        for k in from_neo), 1200)
+        for k in NEO_ATTR), 1200)
 
 
 @receiver(signals.pre_init, sender=Member)
@@ -296,45 +330,10 @@ def load_consumer(sender, **kwargs):
         member = cache.get(cache_key, None)
         if member is None:
             consumer_id = NeoProfile.objects.get(user=pk).consumer_id
-            # retrieve member attributes from Neo
+            # retrieve consumer from Neo
             consumer = api.get_consumer(consumer_id)
-            email = None
-            mobile = None
-            for email in consumer.ConsumerProfile.Email:
-                if email.EmailCategory == 1:
-                    email = email.EmailId
-                elif email.EmailCategory == 3:
-                    mobile = email.EmailId
-            receive_sms = None
-            receive_email = None
-            country = None
-            for p in consumer.Preferences:
-                for q in p.QuestionAnswers:
-                    if q.QuestionID == 92:
-                        country = q.Answer[0].OptionID
-                    elif q.QuestionID == 64:
-                        for a in q.Answer:
-                            if a.CommunicationChannel == 1:
-                                receive_email = True if a.OptionID == 1 else False
-                            elif a.CommunicationChannel == 4:
-                                receive_sms = True if a.OptionID == 1 else False
-            for code, option_id in country_option_id.iteritems():
-                if option_id == country:
-                    country = Country.objects.get(country_code=code)
-                    break
-            
-            member={
-                'username': consumer.UserAccount.LoginCredentials.LoginName,
-                'password': consumer.UserAccount.LoginCredentials.Password,
-                'first_name': consumer.ConsumerProfile.FirstName,
-                'last_name': consumer.ConsumerProfile.LastName,
-                'dob': datetime.strptime(consumer.ConsumerProfile.DOB, "%Y-%m-%d"),
-                'email': email,
-                'mobile_number': mobile,
-                'receive_sms': receive_sms,
-                'receive_email': receive_email,
-                'country': country,
-            }
+            wrapper = ConsumerWrapper(consumer=consumer)        
+            member=dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
             # cache the neo member dictionary
             cache.set(cache_key, member, 1200)
         
