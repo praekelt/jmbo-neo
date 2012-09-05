@@ -29,8 +29,8 @@ NEO_ATTR = ('username', 'password', 'first_name', \
     'receive_sms', 'receive_email', 'country')
 
 # retrieve the brand id and promo code for the website
-BRAND_ID = getattr(settings, 'NEO', {'BRAND_ID': 35})['BRAND_ID']
-PROMO_CODE = getattr(settings, 'NEO', {'PROMO_CODE': 'testPromo'})['PROMO_CODE']
+BRAND_ID = getattr(settings, 'NEO')['BRAND_ID']
+PROMO_CODE = getattr(settings, 'NEO')['PROMO_CODE']
 
 
 # a wrapper class that makes it easier to manage a consumer object

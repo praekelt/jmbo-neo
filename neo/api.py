@@ -1,5 +1,6 @@
 import re
 import requests
+from requests.auth import HTTPBasicAuth
 from datetime import date
 from StringIO import StringIO
 
@@ -9,14 +10,7 @@ from neo.xml import parseString, GDSParseError
 
 
 # get Neo config from Django settings module or use test defaults
-CONFIG = getattr(settings, 'NEO', {
-    'HOST': '209.207.228.37',
-    'PORT': '8180',
-    'APP_ID': '1',
-    'VERSION_ID': '1.3',
-    'PROMO_CODE': 'testPromo',
-    'BRAND_ID': 35,
-})
+CONFIG = getattr(settings, 'NEO')
 # the base url for Neo services
 BASE_URL = "http://%s:%s/neowebservices/%s/%s" % (
     CONFIG['HOST'],
@@ -26,6 +20,9 @@ BASE_URL = "http://%s:%s/neowebservices/%s/%s" % (
 )
 # make the request module catch all exceptions
 requests.defaults.safe_mode = True
+# use basic http authentication
+if CONFIG.get('USER', None):
+    requests.defaults.auth = (CONFIG['USER'], CONFIG['PASSWORD'])
 
 
 # the Neo exception that should be raised if a Neo communication fails

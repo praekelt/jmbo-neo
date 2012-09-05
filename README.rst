@@ -22,4 +22,6 @@ The following settings must be added to settings.py:
         'VERSION_ID': '1.3',
         'PROMO_CODE': 'testPromo',  # if there is a single promo code for the website
         'BRAND_ID': 35,  # if there is a single brand for the website
+        'USER': 'user',  # http basic auth user
+        'PASSWORD': 'password',  # http basic auth password
     }
