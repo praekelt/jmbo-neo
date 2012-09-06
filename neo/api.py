@@ -1,3 +1,4 @@
+import base64
 import re
 import requests
 from requests.auth import HTTPBasicAuth
@@ -12,18 +13,13 @@ from neo.xml import parseString, GDSParseError
 # get Neo config from Django settings module or use test defaults
 CONFIG = getattr(settings, 'NEO')
 # the base url for Neo services
-BASE_URL = "http://%s:%s/neowebservices/%s/%s" % (
-    CONFIG['HOST'],
-    CONFIG['PORT'],
-    CONFIG['APP_ID'],
-    CONFIG['VERSION_ID']
-)
+BASE_URL = '/'.join((CONFIG['URL'], CONFIG['APP_ID'], CONFIG['VERSION_ID']))
 # make the request module catch all exceptions
 requests.defaults.safe_mode = True
 # use basic http authentication
-if CONFIG.get('USER', None):
-    requests.defaults.auth = (CONFIG['USER'], CONFIG['PASSWORD'])
-
+HEADERS = {'content-type': 'application/xml'}
+HEADERS['Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'], CONFIG['PROMO_CODE'])))
+HEADERS['Proxy-Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'])))
 
 # the Neo exception that should be raised if a Neo communication fails
 class NeoError(Exception):
@@ -70,7 +66,7 @@ def create_consumer(consumer):
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
-    response = requests.post("%s/consumers" % (BASE_URL, ), data=data_stream.getvalue())
+    response = requests.post("%s/consumers" % (BASE_URL, ), data=data_stream.getvalue(), headers=HEADERS)
     data_stream.close()
     if response.status_code == 201:
         # parse the consumer_id in location header
@@ -96,7 +92,7 @@ def complete_registration(consumer_id, uri=None):
 def get_consumers(email_id, dob):
     dob_str = dob.strftime("%Y%m%d")
     response = requests.get("%s/consumers/" % (BASE_URL, ),
-        params = {'dateofbirth': dob_str, 'emailid': email_id})
+        params = {'dateofbirth': dob_str, 'emailid': email_id}, headers=HEADERS)
     if response.status_code == 200:
         try:
             consumers = parseString(response.text).Consumer
@@ -128,7 +124,7 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
 
 # get a consumer object containing all the consumer data
 def get_consumer(consumer_id):
-    response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id))
+    response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id), headers=HEADERS)
     if response.status_code == 200:
         try:
             return parseString(response.text)
