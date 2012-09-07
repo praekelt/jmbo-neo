@@ -76,12 +76,12 @@ def create_consumer(sender, **kwargs):
         for k in NEO_ATTR), 1200)
 
 
-'''@receiver(signals.pre_init, sender=Member)
-def load_consumer(sender, **kwargs):
-    init_args = kwargs['args']
+@receiver(signals.post_init, sender=Member)
+def load_consumer(sender, *args, **kwargs):
+    instance = kwargs['instance']
     # if the object being instantiated has a pk, i.e. has been saved to the db
-    if len(init_args) > 0 and init_args[0]:
-        pk = init_args[0]
+    if instance.id:
+        pk = instance.id
         cache_key = 'neo_consumer_%s' % pk
         member = cache.get(cache_key, None)
         if member is None:
@@ -92,12 +92,7 @@ def load_consumer(sender, **kwargs):
             member=dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
             # cache the neo member dictionary
             cache.set(cache_key, member, 1200)
-        
-        # update init_args
-        i = 0
-        for field in Member._meta.fields:
-            val = member.get(field.name, None)
-            if val is not None:
-                init_args[i] = val 
-            i += 1
-'''           
+
+        # update instance with Neo attributes
+        for key, val in member.iteritems():
+            setattr(instance, key, val)
