@@ -73,7 +73,7 @@ def create_consumer(consumer):
         uri = response.headers["Location"]
         match = re.search(r"/consumers/(?P<id>\d+)/", uri)
         if match:
-            return match.group('id'), uri 
+            return match.group('id'), uri
     
     return None
 

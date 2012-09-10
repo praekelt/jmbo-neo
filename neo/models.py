@@ -9,6 +9,7 @@ from foundry.models import Member, Country
 
 from neo import api
 from neo.utils import ConsumerWrapper
+from neo.constants import modify_flag
 
 
 class NeoProfile(models.Model):
@@ -18,9 +19,11 @@ class NeoProfile(models.Model):
 
 
 # the member attributes that are stored on Neo and in memcached
-NEO_ATTR = ('username', 'password', 'first_name', \
+NEO_ATTR = frozenset(('username', 'password', 'first_name', \
     'last_name', 'dob', 'email', 'mobile_number', \
-    'receive_sms', 'receive_email', 'country')
+    'receive_sms', 'receive_email', 'country'))
+JMBO_REQUIRED_FIELDS = frozenset(('username', 'password', \
+    'mobile_number', 'receive_sms', 'receive_email'))
 
                     
 @receiver(user_logged_out)
@@ -32,9 +35,31 @@ def notify_logout(sender, **kwargs):
         pass # figure out something to do here
 
 
+@receiver(signals.pre_save, sender=Member)
+def stash_neo_fields(sender, **kwargs):
+    cleared_fields = {}
+    member = kwargs['instance']
+    '''
+    Stash the neo fields that aren't required and clear
+    them on the instance so that they aren't saved to db
+    '''
+    for key in NEO_ATTR.difference(JMBO_REQUIRED_FIELDS):
+        cleared_fields[key] = getattr(member, key)
+        #setattr(member, key, None)
+    member.cleared_fields = cleared_fields
+
+
 @receiver(signals.post_save, sender=Member)
 def create_consumer(sender, **kwargs):
     member = kwargs['instance']
+    '''
+    Reassign the stashed neo fields and delete
+    the stash
+    '''
+    for key, val in member.cleared_fields.iteritems():
+        setattr(member, key, val)
+    del member.cleared_fields
+
     cache_key = 'neo_consumer_%s' % member.pk
     if kwargs['created']:
         # create consumer
@@ -60,11 +85,11 @@ def create_consumer(sender, **kwargs):
                 if current != old:
                     # update attribute on Neo
                     if old is None:
-                        getattr(wrapper, "set_%s" % k)(current, mod_flag='I')  # insert
+                        getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['INSERT'])
                     elif current is None:
-                        getattr(wrapper, "set_%s" % k)(old, mod_flag='D')  # delete
+                        getattr(wrapper, "set_%s" % k)(old, mod_flag=modify_flag['DELETE'])
                     else:
-                        getattr(wrapper, "set_%s" % k)(current, mod_flag='U')  # update
+                        getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['UPDATE'])
         try:
             consumer_id = NeoProfile.objects.get(user=member)
             api.update_consumer(consumer_id, wrapper.consumer)
@@ -88,11 +113,13 @@ def load_consumer(sender, *args, **kwargs):
             consumer_id = NeoProfile.objects.get(user=pk).consumer_id
             # retrieve consumer from Neo
             consumer = api.get_consumer(consumer_id)
-            wrapper = ConsumerWrapper(consumer=consumer)        
+            wrapper = ConsumerWrapper(consumer=consumer)
             member=dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
             # cache the neo member dictionary
             cache.set(cache_key, member, 1200)
 
         # update instance with Neo attributes
         for key, val in member.iteritems():
-            setattr(instance, key, val)
+            # don't override the hashed django password
+            if key != 'password':
+                setattr(instance, key, val)

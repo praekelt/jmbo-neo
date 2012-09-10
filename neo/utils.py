@@ -210,10 +210,10 @@ class ConsumerWrapper(object):
         if email:
             prof = self._get_or_create_profile()
             updated = False
-            for email in prof.Email:
-                if email.EmailCategory == email_category['PERSONAL']:
-                    email.EmailId = email
-                    email.ModifyFlag = mod_flag
+            for em in prof.Email:
+                if em.EmailCategory == email_category['PERSONAL']:
+                    em.EmailId = email
+                    em.ModifyFlag = mod_flag
                     updated = True
                     break
             if not updated:
