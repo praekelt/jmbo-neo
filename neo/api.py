@@ -37,7 +37,8 @@ def authenticate(username=None, password=None, token=None, promo_code=None, acq_
     if acq_src:
         params['acquisitionsource'] = acq_src
         
-    response = requests.get("%s/consumers/useraccount" % (BASE_URL, ), params=params)
+    response = requests.get("%s/consumers/useraccount" % (BASE_URL, ), \
+        params=params, headers=HEADERS)
     if response.status_code == 200:
         return response.text  # response body contains consumer_id
         
@@ -50,14 +51,14 @@ def logout(consumer_id, promo_code=None, acq_src=None):
     if acq_src:
         params['acquisitionsource'] = acq_src
     response = requests.put("%s/consumers/%s/useraccount/notifylogout" % (BASE_URL, consumer_id),
-        params=params)
+        params=params, headers=HEADERS)
     return response.status_code == 200
 
 
 # stores a remember me token on Neo server
 def remember_me(consumer_id, token):
     response = requests.put("%s/consumers/%s/useraccount" % (BASE_URL, consumer_id),
-        params={'authtoken': token})
+        params={'authtoken': token}, headers=HEADERS)
     return response.status_code == 200
 
 
@@ -66,7 +67,8 @@ def create_consumer(consumer):
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
-    response = requests.post("%s/consumers" % (BASE_URL, ), data=data_stream.getvalue(), headers=HEADERS)
+    response = requests.post("%s/consumers" % (BASE_URL, ), \
+        data=data_stream.getvalue(), headers=HEADERS)
     data_stream.close()
     if response.status_code == 201:
         # parse the consumer_id in location header
@@ -81,7 +83,8 @@ def create_consumer(consumer):
 # activates the newly created consumer account, optionally using a validation uri
 def complete_registration(consumer_id, uri=None):
     if not uri:
-        response = requests.post("%s/consumers/%s/registration" % (BASE_URL, consumer_id))
+        response = requests.post("%s/consumers/%s/registration" % (BASE_URL, consumer_id), \
+            headers=HEADERS)
     else:
         response = requests.get(uri)
     return response.status_code == 200
@@ -112,7 +115,8 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
     }
     if acq_src:
         params['acquisitionsource'] = acq_src
-    response = requests.put("%s/consumers/%s/registration/" % (BASE_URL, consumer_id), params=params)
+    response = requests.put("%s/consumers/%s/registration/" % (BASE_URL, consumer_id), \
+        params=params, headers=HEADERS)
     if response.status_code == 200:
         try:
             return parseString(response.text)
@@ -124,7 +128,8 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
 
 # get a consumer object containing all the consumer data
 def get_consumer(consumer_id):
-    response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id), headers=HEADERS)
+    response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id), \
+        headers=HEADERS)
     if response.status_code == 200:
         try:
             return parseString(response.text)
@@ -136,7 +141,8 @@ def get_consumer(consumer_id):
 
 # get a consumer's profile
 def get_consumer_profile(consumer_id):
-    response = requests.get("%s/consumers/%s/profile" % (BASE_URL, consumer_id))
+    response = requests.get("%s/consumers/%s/profile" % (BASE_URL, consumer_id), \
+        headers=HEADERS)
     if response.status_code == 200:
         try:
             return parseString(response.text)
@@ -152,7 +158,7 @@ def get_consumer_preferences(consumer_id, category_id=None):
     uri = "%s/consumers/%s/preferences" % (BASE_URL, consumer_id)
     if category_id:
         uri += "/category/%s" % category_id
-    response = requests.get(uri)
+    response = requests.get(uri, headers=HEADERS)
     if response.status_code == 200:
         try:
             return parseString(response.text)
@@ -168,7 +174,7 @@ def update_consumer(consumer_id, consumer):
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
     response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id),
-        data=data_stream.getvalue())
+        data=data_stream.getvalue(), headers=HEADERS)
     data_stream.close()
     return response.status_code == 200
 
@@ -183,9 +189,9 @@ def update_consumer_preferences(consumer_id, preferences, category_id=None, crea
     if category_id:
         uri += "/category/%s" % category_id
     if create:
-        response = requests.post(uri, data=data_stream.getvalue())
+        response = requests.post(uri, data=data_stream.getvalue(), headers=HEADERS)
     else:
-        response = requests.put(uri, data=data_stream.getvalue())
+        response = requests.put(uri, data=data_stream.getvalue(), headers=HEADERS)
     data_stream.close()
     return response.status_code == 200
 
@@ -201,7 +207,8 @@ def get_forgot_password_token(username):
         'loginname': username,
         'temptoken': 0
     }
-    response = requests.get("%s/consumers/useraccount" % (BASE_URL, ), params=params)
+    response = requests.get("%s/consumers/useraccount" % (BASE_URL, ), \
+        params=params, headers=HEADERS)
     if response.status_code == 200:
         try:
             return parseString(response.text)
@@ -223,7 +230,8 @@ def change_password(username, new_password, old_password=None, token=None):
         params['temptoken'] = token
     else:
         raise ValueError("Either the old password or the forgot password token needs to be specified.")
-    response = requests.put("%s/consumers/useraccount" % (BASE_URL, ), params=params)
+    response = requests.put("%s/consumers/useraccount" % (BASE_URL, ), \
+        params=params, headers=HEADERS)
     if response.status_code == 200:
         return response.text
     
@@ -237,7 +245,7 @@ def unsubscribe(consumer_id, unsubscribe_obj):
     # write the unsubscribe data in xml to a string stream
     unsubscribe_obj.export(data_stream, 0)
     response = requests.put("%s/consumers/%s/preferences/unsubscribe" % (BASE_URL, consumer_id),
-        data=data_stream.getvalue())
+        data=data_stream.getvalue(), headers=HEADERS)
     data_stream.close()
     return response.status_code == 200
 
@@ -247,7 +255,8 @@ def add_promo_code(consumer_id, promo_code, acq_src=None):
     params = {'promocode': promo_code}
     if acq_src:
         params['acquisitionsource'] = acq_src
-    response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id), params=params)
+    response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id), \
+        params=params, headers=HEADERS)
     return response.status_code == 200
 
 
@@ -261,7 +270,8 @@ def do_age_check(dob, country_code, gateway_id, language_code=None):
     }
     if language_code:
         params['language_code'] = language_code
-    response = requests.get("%s/consumers/affirmage" % (BASE_URL, ), params=params)
+    response = requests.get("%s/consumers/affirmage" % (BASE_URL, ), \
+        params=params, headers=HEADERS)
     if response.status_code == 200:
         try:
             return parseString(response.text)
@@ -279,7 +289,8 @@ def get_country(country_code=None, ip_address=None):
         params = {'ipaddress': ip_address}
     else:
         raise ValueError("Either the country code or ip address needs to be specified.")
-    response = requests.get("%s/country/" % (BASE_URL, ), params=params)
+    response = requests.get("%s/country/" % (BASE_URL, ), \
+        params=params, headers=HEADERS)
     if response.status_code == 200:
         try:
             return parseString(response.text)
