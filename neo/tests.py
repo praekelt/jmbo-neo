@@ -50,6 +50,35 @@ class NeoTestCase(TestCase):
         for key in NEO_ATTR:
             self.assertEqual(getattr(member1, key), getattr(member2, key))
     
+    def test_update_member(self):
+        member = self.create_member()
+        new_dob = timezone.now().date() - timedelta(days=24 * 365)
+        new_country = Country.objects.create(
+            title="South Africa",
+            slug="south-africa",
+            country_code="ZA",
+        )
+        # change the member attributes
+        for key, val in self.member_attrs.iteritems():
+            if key == 'dob':
+                new_val = new_dob
+            elif key == 'country':
+                new_val = new_country
+            else:
+                new_val = "new_" + val
+            setattr(member, key, new_val)
+        member.save()
+        cache.clear()
+        member = Member.objects.all()[0]
+        for key, val in self.member_attrs.iteritems():
+            if key == 'dob':
+                new_val = new_dob
+            elif key == 'country':
+                new_val = new_country
+            else:
+                new_val = "new_" + val
+            self.assertEqual(getattr(member, key), new_val)
+
     def test_login(self):
         member = self.create_member()
         self.client.login(username=member.username, password=member.password)
