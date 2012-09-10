@@ -2,7 +2,8 @@ from datetime import date
 
 from django.conf import settings
 
-from neo.constants import country_option_id
+from neo.constants import country_option_id, address_type, gender, marital_status, \
+    modify_flag, phone_type, email_category, comm_channel, question_category
 from neo.xml import Consumer, ConsumerProfileType, PreferencesType, UserAccountType, \
     EmailDetailsType, PhoneDetailsType, AnswerType, CategoryType, LoginCredentialsType, \
     QuestionAnswerType
@@ -48,8 +49,7 @@ class ConsumerWrapper(object):
         return None
         
     def _get_opt_in(self, question_id, brand_id, comm_channel):
-        # 1 - opt in category
-        answers = self._get_preference(1, question_id)
+        answers = self._get_preference(question_category['OPTIN'], question_id)
         if answers is not None:
             for a in answers:
                 if a.CommunicationChannel == comm_channel:
@@ -82,7 +82,7 @@ class ConsumerWrapper(object):
                       
 
     def _set_opt_in(self, value, question_id, brand_id, comm_channel, mod_flag):
-        answers = self._get_preference(1, question_id)
+        answers = self._get_preference(question_category['OPTIN'], question_id)
         updated = False
         if answers is not None:
             for a in answers:
@@ -97,7 +97,7 @@ class ConsumerWrapper(object):
                 BrandID=brand_id,
                 CommunicationChannel=comm_channel
             )
-            self._set_preference(answer, 1, question_id, mod_flag)
+            self._set_preference(answer, question_category['OPTIN'], question_id, mod_flag)
             
     @property
     def consumer(self):
@@ -106,20 +106,17 @@ class ConsumerWrapper(object):
     @property
     def receive_sms(self):
         # 64 - receive communication from brand via communication channel?
-        # 4 - sms communication channel
-        return self._get_opt_in(64, BRAND_ID, 4)
+        return self._get_opt_in(64, BRAND_ID, comm_channel['SMS'])
     
     @property
     def receive_email(self):
         # 64 - receive communication from brand via communication channel?
-        # 1 - email communication channel
-        return self._get_opt_in(64, BRAND_ID, 1)
+        return self._get_opt_in(64, BRAND_ID, comm_channel['EMAIL'])
     
     @property
     def country(self):
-        # 4 - general category
         # 92 - country of residence?
-        answers = self._get_preference(4, 92)
+        answers = self._get_preference(question_category['GENERAL'], 92)
         if answers is not None:
             country = answers[0].OptionID
             for code, option_id in country_option_id.iteritems():
@@ -139,7 +136,7 @@ class ConsumerWrapper(object):
     def email(self):
         if self._consumer.ConsumerProfile is not None:
             for email in self._consumer.ConsumerProfile.Email:
-                if email.EmailCategory == 1:
+                if email.EmailCategory == email_category['PERSONAL']:
                     return email.EmailId
         return None
     
@@ -147,7 +144,7 @@ class ConsumerWrapper(object):
     def mobile_number(self):
         if self._consumer.ConsumerProfile is not None:
             for phone in self._consumer.ConsumerProfile.Phone:
-                if phone.PhoneType == 3:
+                if phone.PhoneType == phone_type['MOBILE']:
                     return phone.PhoneNumber
         return None
     
@@ -175,46 +172,46 @@ class ConsumerWrapper(object):
             return self._consumer.UserAccount.LoginCredentials.Password
         return None  
     
-    def set_receive_sms(self, value, mod_flag='I'):
+    def set_receive_sms(self, value, mod_flag=modify_flag['INSERT']):
         if value is not None:
-            self._set_opt_in(value, 64, BRAND_ID, 4, mod_flag)
+            self._set_opt_in(value, 64, BRAND_ID, comm_channel['SMS'], mod_flag)
     
-    def set_receive_email(self, value, mod_flag='I'):
+    def set_receive_email(self, value, mod_flag=modify_flag['INSERT']):
         if value is not None:
-            self._set_opt_in(value, 64, BRAND_ID, 1, mod_flag)
+            self._set_opt_in(value, 64, BRAND_ID, comm_channel['EMAIL'], mod_flag)
 
-    def set_country(self, country, mod_flag='I'):
+    def set_country(self, country, mod_flag=modify_flag['INSERT']):
         if country:
-            answers = self._get_preference(4, 92)
+            answers = self._get_preference(question_category['GENERAL'], 92)
             if answers is not None:
                 answers[0].OptionID = country_option_id[country.country_code]
                 answers[0].ModifyFlag = mod_flag
             else:
                 answer = AnswerType(OptionID=country_option_id[country.country_code])
-                self._set_preference(answer, 4, 92, mod_flag)
+                self._set_preference(answer, question_category['GENERAL'], 92, mod_flag)
     
-    def set_dob(self, dob, mod_flag='I'):
+    def set_dob(self, dob, mod_flag=modify_flag['INSERT']):
         if dob:
             self._get_or_create_profile().DOB = dob.strftime("%Y-%m-%d")
     
-    def set_first_name(self, first_name, mod_flag='I'):
+    def set_first_name(self, first_name, mod_flag=modify_flag['INSERT']):
         self._get_or_create_profile().FirstName = first_name
     
-    def set_last_name(self, last_name, mod_flag='I'):
+    def set_last_name(self, last_name, mod_flag=modify_flag['INSERT']):
         self._get_or_create_profile().LastName = last_name
     
-    def set_username(self, username, mod_flag='I'):
+    def set_username(self, username, mod_flag=modify_flag['INSERT']):
         self._get_or_create_account().LoginCredentials.LoginName = username
         
-    def set_password(self, password, mod_flag='I'):
-        self._get_or_create_account().LoginCredentials.Password = password
+    def set_password(self, password, mod_flag=modify_flag['INSERT']):
+        self._get_or_create_account().LoginCredentials.Password = password.split("$")[-1]
         
-    def set_email(self, email, mod_flag='I'):
+    def set_email(self, email, mod_flag=modify_flag['INSERT']):
         if email:
             prof = self._get_or_create_profile()
             updated = False
             for email in prof.Email:
-                if email.EmailCategory == 1:
+                if email.EmailCategory == email_category['PERSONAL']:
                     email.EmailId = email
                     email.ModifyFlag = mod_flag
                     updated = True
@@ -222,23 +219,23 @@ class ConsumerWrapper(object):
             if not updated:
                 prof.add_Email(EmailDetailsType(
                     EmailId=email,
-                    EmailCategory=1,
+                    EmailCategory=email_category['PERSONAL'],
                     IsDefaultFlag=(0 if len(prof.Email) > 0 else 1),
                     ModifyFlag=mod_flag
                 ))
 
-    def set_mobile_number(self, mobile_number, mod_flag='I'):
+    def set_mobile_number(self, mobile_number, mod_flag=modify_flag['INSERT']):
         if mobile_number:
             prof = self._get_or_create_profile()
             if len(prof.Phone) == 0:
                 prof.add_Phone(PhoneDetailsType(
                     PhoneNumber=mobile_number,
-                    PhoneType=3,
+                    PhoneType=phone_type['MOBILE'],
                     ModifyFlag=mod_flag
                 ))
                 prof.add_Email(EmailDetailsType(
                     EmailId=mobile_number,
-                    EmailCategory=4,
+                    EmailCategory=email_category['MOBILE_NO'],
                     IsDefaultFlag=(0 if len(prof.Email) > 0 else 1),
                     ModifyFlag=mod_flag
                 ))
@@ -246,7 +243,7 @@ class ConsumerWrapper(object):
                 prof.Phone[0].PhoneNumber = mobile_number
                 prof.Phone[0].ModifyFlag = mod_flag
                 for email in prof.Email:
-                    if email.EmailCategory == 4:
+                    if email.EmailCategory == email_category['MOBILE_NO']:
                         email.EmailId = email
                         email.ModifyFlag = mod_flag
                         break

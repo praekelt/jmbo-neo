@@ -259,3 +259,54 @@ country_option_id = {
     'ND': 254,
     'XK': 255,
 }
+
+address_type = {
+    'HOME': 1,
+    'OFFICE': 2,
+    'POSTAL': 3,
+}
+
+gender = {
+    'MALE': 1,
+    'FEMALE': 2,
+}
+
+marital_status = {
+    'MARRIED': 1,
+    'SINGLE': 2,
+    'DIVORCED': 3,
+}
+
+phone_type = {
+    'HOME': 1,
+    'OFFICE': 2,
+    'MOBILE': 3,
+}
+
+modify_flag = {
+    'INSERT': 'I',
+    'UPDATE': 'U',
+    'DELETE': 'D',
+    'MODIFY': 'M',
+}
+
+# communication channel
+comm_channel = {
+    'EMAIL': 1,
+    'POSTAL': 2,
+    'PHONE': 3,
+    'SMS': 4,
+}
+
+email_category = {
+    'PERSONAL': 1,
+    'BUSINESS': 2,
+    'MOBILE_EMAIL': 3,
+    'MOBILE_NO': 4,
+}
+
+# there are many more Diageo categories, but we only need these for now
+question_category = {
+    'OPTIN': 1,
+    'GENERAL': 4,
+}
