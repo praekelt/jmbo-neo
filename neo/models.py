@@ -17,8 +17,10 @@ class NeoProfile(models.Model):
     # the Neo consumer id used in API requests
     consumer_id = models.PositiveIntegerField(primary_key=True)
 
-
-# the member attributes that are stored on Neo and in memcached
+'''
+The member attributes that are stored on Neo and in memcached
+NB. These attributes must be required during registration for any Neo app
+'''
 NEO_ATTR = frozenset(('username', 'password', 'first_name', \
     'last_name', 'dob', 'email', 'mobile_number', \
     'receive_sms', 'receive_email', 'country'))
@@ -45,7 +47,18 @@ def stash_neo_fields(sender, **kwargs):
     '''
     for key in NEO_ATTR.difference(JMBO_REQUIRED_FIELDS):
         cleared_fields[key] = getattr(member, key)
-        #setattr(member, key, None)
+        '''
+        If field can be null, set to None. Otherwise assign
+        a default value. If a default value has not been
+        specified, assign the default of the python type
+        '''
+        field = Member._meta.get_field_by_name(key)[0]
+        if field.null:
+            setattr(member, key, None)
+        elif field.default != models.fields.NOT_PROVIDED:
+            setattr(member, key, field.default)
+        else:
+            setattr(member, key, type(cleared_fields[key])())
     member.cleared_fields = cleared_fields
 
 
@@ -63,7 +76,6 @@ def create_consumer(sender, **kwargs):
     cache_key = 'neo_consumer_%s' % member.pk
     if kwargs['created']:
         # create consumer
-        # NB. These attributes must be required during registration for any Neo app
         wrapper = ConsumerWrapper()
         for a in NEO_ATTR:
             getattr(wrapper, "set_%s" % a)(getattr(member, a))
