@@ -69,7 +69,9 @@ class NeoTestCase(TestCase):
             setattr(member, key, new_val)
         member.save()
         cache.clear()
+        # retrieve the member from db + Neo
         member = Member.objects.all()[0]
+        # check that updated values had been stored on Neo
         for key, val in self.member_attrs.iteritems():
             if key == 'dob':
                 new_val = new_dob
@@ -81,11 +83,10 @@ class NeoTestCase(TestCase):
 
     def test_login(self):
         member = self.create_member()
-        self.client.login(username=member.username, password=member.password)
-        self.assertTrue(member.is_authenticated())
+        self.assertTrue(self.client.login(username=member.username, password='password'))
 
     def test_logout(self):
         member = self.create_member()
-        self.client.login(username=member.username, password=member.password)
+        self.client.login(username=member.username, password='password')
         self.client.logout()
         self.assertFalse(member.is_authenticated())

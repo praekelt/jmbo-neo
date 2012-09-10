@@ -41,6 +41,8 @@ NEO = {
     'PASSWORD': 'PraJWTRegApp@67125_19092011',
 }
 
+AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend',)
+
 STATIC_URL = 'static/'
 
 SITE_ID = 1

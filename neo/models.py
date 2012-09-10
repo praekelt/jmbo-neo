@@ -107,7 +107,7 @@ def create_consumer(sender, **kwargs):
             api.update_consumer(consumer_id, wrapper.consumer)
         except api.NeoError:
             pass
-                    
+
     # cache this member after it is saved (thus created/updated successfully)
     cache.set(cache_key, dict((k, getattr(member, k, None)) \
         for k in NEO_ATTR), 1200)
