@@ -3,12 +3,14 @@ from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_out
 from django.db.models import signals
 from django.dispatch import receiver
+from django.core.cache import cache
+from django.contrib.auth.hashers import make_password
 
-from foundry.models import Member
+from foundry.models import Member, Country
 
 from neo import api
-from neo.xml import Consumer, ConsumerProfileType, PreferencesType, UserAccountType, \
-    EmailDetailsType, PhoneDetailsType, AnswerType
+from neo.utils import ConsumerWrapper
+from neo.constants import modify_flag
 
 
 class NeoProfile(models.Model):
@@ -16,7 +18,19 @@ class NeoProfile(models.Model):
     # the Neo consumer id used in API requests
     consumer_id = models.PositiveIntegerField(primary_key=True)
 
+'''
+The member attributes that are stored on Neo and in memcached
+NB. These attributes must be required during registration for any Neo app
+NB. Password is a special case and is handled separately
+'''
+NEO_ATTR = frozenset(('username', 'first_name', \
+    'last_name', 'dob', 'email', 'mobile_number', \
+    'receive_sms', 'receive_email', 'country'))
 
+# These fields correspond to the available login fields in jmbo-foundry
+JMBO_REQUIRED_FIELDS = frozenset(('username', 'mobile_number', 'email'))
+
+                    
 @receiver(user_logged_out)
 def notify_logout(sender, **kwargs):
     try:
@@ -26,63 +40,112 @@ def notify_logout(sender, **kwargs):
         pass # figure out something to do here
 
 
-# ModifyFlag needs to be set to one of I (insert), U (update) and D (delete) for the following:
-# AnswerType
-# EmailDetailsType
-# AddressDetailsType
-# PhoneDetailsType
+@receiver(signals.pre_save, sender=Member)
+def stash_neo_fields(sender, **kwargs):
+    cleared_fields = {}
+    member = kwargs['instance']
+    '''
+    Stash the neo fields that aren't required and clear
+    them on the instance so that they aren't saved to db
+    '''
+    for key in NEO_ATTR.difference(JMBO_REQUIRED_FIELDS):
+        cleared_fields[key] = getattr(member, key)
+        '''
+        If field can be null, set to None. Otherwise assign
+        a default value. If a default value has not been
+        specified, assign the default of the python type
+        '''
+        field = Member._meta.get_field_by_name(key)[0]
+        if field.null:
+            setattr(member, key, None)
+        elif field.default != models.fields.NOT_PROVIDED:
+            setattr(member, key, field.default)
+        else:
+            setattr(member, key, type(cleared_fields[key])())
+    member.cleared_fields = cleared_fields
 
 
-@receiver(signals.post_save)
+@receiver(signals.post_save, sender=Member)
 def create_consumer(sender, **kwargs):
-    if issubclass(sender, Member) and kwargs['created']:
-        instance = kwargs['instance']
-        # for registration ConsumerProfile, Preferences and UserAccount are mandatory
-        
-        # create consumer profile
-        # NB. These ConsumerProfileType attributes must be required during registration for any Neo app
-        profile = ConsumerProfileType({
-            'Title': '',
-            'FirstName': instance.first_name,
-            'LastName': instance.last_name,
-            'DOB': instance.dob.strftime("%Y-%m-%d"),
-            'PromoCode': 'testPromo',
-        })
-        if getattr(instance, 'mobile_number', False):
-            profile.add_Email(EmailDetailsType({
-                'EmailId': instance.mobile_number,
-                'EmailCategory': 3,
-                'IsDefaultFlag': 1,
-                'ModifyFlag': 'I'
-            }))
-            profile.add_Phone(PhoneDetailsType({
-                'PhoneNumber': instance.mobile_number,
-                'PhoneType': 3,
-                'ModifyFlag': 'I'
-            }))
-        if getattr(instance, 'email', False):
-            profile.add_Email(EmailDetailsType({
-                'EmailId': instance.email,
-                'EmailCategory': 1,
-                'IsDefaultFlag': (0 if len(email) > 0 else 1),
-                'ModifyFlag': 'I'
-            }))
-            
-        # create consumer preferences
-        preferences = PreferencesType({
-            
-        })
-        # create consumer account details
-        account = UserAccountType({
-        })
-        # create optional consumer attributes
-        
-        # create the consumer
-        consumer = Consumer({
-            'ConsumerProfile': profile,
-            'Preferences': preferences,
-            'UserAccount': account
-        })
-        consumer_id = api.create_consumer(consumer)
-        
-            
+    member = kwargs['instance']
+    '''
+    Reassign the stashed neo fields and delete
+    the stash
+    '''
+    for key, val in member.cleared_fields.iteritems():
+        setattr(member, key, val)
+    del member.cleared_fields
+
+    cache_key = 'neo_consumer_%s' % member.pk
+    if kwargs['created']:
+        # create consumer
+        wrapper = ConsumerWrapper()
+        for a in NEO_ATTR:
+            getattr(wrapper, "set_%s" % a)(getattr(member, a))
+        wrapper.set_password(member.raw_password)
+        del member.raw_password
+        try:
+            consumer_id, uri = api.create_consumer(wrapper.consumer)
+            neo_profile = NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
+        except api.NeoError:
+            pass
+
+    else:
+        # update changed attributes
+        old_member = cache.get(cache_key, None)
+        wrapper = ConsumerWrapper()
+        if old_member is not None:  # it should never be None
+            for k in NEO_ATTR:
+                # check where cached version and current version of member differ
+                current = getattr(member, k, None)
+                old = old_member.get(k, None)
+                if current != old:
+                    # update attribute on Neo
+                    if old is None:
+                        getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['INSERT'])
+                    elif current is None:
+                        getattr(wrapper, "set_%s" % k)(old, mod_flag=modify_flag['DELETE'])
+                    else:
+                        getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['UPDATE'])
+        try:
+            consumer_id = NeoProfile.objects.get(user=member)
+            api.update_consumer(consumer_id, wrapper.consumer)
+        except api.NeoError:
+            pass
+
+    # cache this member after it is saved (thus created/updated successfully)
+    cache.set(cache_key, dict((k, getattr(member, k, None)) \
+        for k in NEO_ATTR), 1200)
+
+
+@receiver(signals.post_init, sender=Member)
+def load_consumer(sender, *args, **kwargs):
+    instance = kwargs['instance']
+    # if the object being instantiated has a pk, i.e. has been saved to the db
+    if instance.id:
+        pk = instance.id
+        cache_key = 'neo_consumer_%s' % pk
+        member = cache.get(cache_key, None)
+        if member is None:
+            consumer_id = NeoProfile.objects.get(user=pk).consumer_id
+            # retrieve consumer from Neo
+            consumer = api.get_consumer(consumer_id)
+            wrapper = ConsumerWrapper(consumer=consumer)
+            member=dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
+            # cache the neo member dictionary
+            cache.set(cache_key, member, 1200)
+
+        # update instance with Neo attributes
+        for key, val in member.iteritems():
+            setattr(instance, key, val)
+
+'''
+Patch the user class so that the clear text
+password is stored on the object, thus making
+it accessible by Neo.
+'''
+def set_password(user, raw_password):
+    user.raw_password = raw_password
+    user.password = make_password(raw_password)
+
+User.set_password = set_password

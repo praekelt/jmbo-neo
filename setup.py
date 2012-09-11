@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='jmbo-neo',
     version='0.0.1',
-    description='Jmbo Neo Web Service integration app.',
+    description='Jmbo Neo Web Services integration app.',
     long_description = open('README.rst', 'r').read() + open('AUTHORS.rst', 'r').read() + open('CHANGELOG.rst', 'r').read(),
     author='Praekelt International',
     author_email='dev@praekelt.com',
@@ -14,10 +14,12 @@ setup(
         'jmbo',
         'jmbo-foundry',
         'django-ckeditor',
-        'requests'
+        'requests',
+        'lxml',
     ],
     tests_require=[
         'django-setuptest',
+        'python-memcached',
     ],
     test_suite="setuptest.setuptest.SetupTestSuite",
     include_package_data=True,

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:include schemaLocation="DiageoSearchTypes.xsd"></xs:include>
+	<xs:element name="SearchResult" type="SearchResultType">
+	</xs:element>
+	<xs:complexType name="SearchResultType">
+		<xs:sequence>
+			<xs:element name="ConsumerFound" type="xs:string" nillable="false" minOccurs="0" maxOccurs="1">
+        <xs:annotation>
+          <xs:documentation>Result will be "Y" if consumer found in CIDB or country specific hub, will be "N" if counsumer is not found in CIDB or country specific hub and will be "HubSearch" if the request has been forwarded to country specific hub.</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Gender" type="Gender" nillable="true" minOccurs="0" maxOccurs="1"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

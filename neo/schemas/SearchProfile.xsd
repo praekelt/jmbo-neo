@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:include schemaLocation="DiageoSearchTypes.xsd"></xs:include>
+	<xs:element name="ConsumerSearchProfile" type="ConsumerSearchProfileType">
+	</xs:element>
+	<xs:complexType name="ConsumerSearchProfileType">
+		<xs:sequence>
+			<xs:element name="DOB" type="Date" nillable="true" minOccurs="1" maxOccurs="1"></xs:element>
+      <xs:element name="CountryOfResidence" type="xs:string" minOccurs="1" maxOccurs="1"></xs:element>
+      <xs:element name="SearchBy_EmailOrMobile" type="xs:string" minOccurs="1" maxOccurs="1"></xs:element>
+      <xs:element name="EmailOrMobile" type="xs:string" minOccurs="1" maxOccurs="1"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

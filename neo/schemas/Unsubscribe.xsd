@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+	<xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+	<xs:include schemaLocation="Profile.xsd"></xs:include>
+	<xs:element name="UnsubscribePreferences" type="UnsubscribePreferencesType"></xs:element>
+	
+	<xs:complexType name="UnsubscribePreferencesType">
+		<xs:sequence>
+			<xs:element name="ConsumerDetails" type="ConsumerDetailsType" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="Preference" type="UnsubscribePreferenceType" minOccurs="1" maxOccurs="unbounded"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:complexType name="UnsubscribePreferenceType">
+		<xs:sequence>
+			<xs:element name="QuestionID" type="xs:long" minOccurs="1" maxOccurs="1"></xs:element>
+			<xs:element name="OptionID" type="xs:long" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="OptionDetails" type="CommunicationChannelDetailsType" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="BrandID" type="BrandID" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="CommunicationChannel" type="CommunicationChannel" minOccurs="1" maxOccurs="1"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:complexType name="CommunicationChannelDetailsType">
+		<xs:sequence>
+			<xs:element name="Postal" type="AddressDetailsType" minOccurs="0" maxOccurs="unbounded"></xs:element>
+			<xs:element name="Email" type="EmailDetailsType" minOccurs="0" maxOccurs="unbounded"></xs:element>
+			<xs:element name="Phone" type="PhoneDetailsType" minOccurs="0" maxOccurs="unbounded"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:complexType name="ConsumerDetailsType">
+		<xs:sequence>
+			<xs:element name="Title" type="Title" nillable="true" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="Suffix" type="Suffix" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="FirstName" type="FirstName" nillable="true" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="MiddleName" type="MiddleName" nillable="true" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="LastName" type="LastName" nillable="true" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="MaternalLastName" type="LastName" nillable="true" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="DOB" type="Date" nillable="true" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="CountryOfResidence" type="CountryName" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="PromoCode" type="PromoCodeDesc" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="AcquisitionSource" type="AcquisitionSourceType" minOccurs="0" maxOccurs="1"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	
+</xs:schema>
