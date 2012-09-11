@@ -3,9 +3,9 @@ from datetime import timedelta
 
 from django.test import TestCase
 from django.test.client import Client
-from django.core.urlresolvers import reverse
 from django.utils import timezone
 from django.core.cache import cache
+from django.core.urlresolvers import reverse
 
 from foundry.models import Member, Country
 from neo.models import NeoProfile, NEO_ATTR
@@ -89,4 +89,3 @@ class NeoTestCase(TestCase):
         member = self.create_member()
         self.client.login(username=member.username, password='password')
         self.client.logout()
-        self.assertFalse(member.is_authenticated())

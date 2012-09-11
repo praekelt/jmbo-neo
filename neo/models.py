@@ -4,6 +4,7 @@ from django.contrib.auth.signals import user_logged_out
 from django.db.models import signals
 from django.dispatch import receiver
 from django.core.cache import cache
+from django.contrib.auth.hashers import make_password
 
 from foundry.models import Member, Country
 
@@ -20,12 +21,14 @@ class NeoProfile(models.Model):
 '''
 The member attributes that are stored on Neo and in memcached
 NB. These attributes must be required during registration for any Neo app
+NB. Password is a special case and is handled separately
 '''
-NEO_ATTR = frozenset(('username', 'password', 'first_name', \
+NEO_ATTR = frozenset(('username', 'first_name', \
     'last_name', 'dob', 'email', 'mobile_number', \
     'receive_sms', 'receive_email', 'country'))
-JMBO_REQUIRED_FIELDS = frozenset(('username', 'password', \
-    'mobile_number', 'receive_sms', 'receive_email'))
+
+# These fields correspond to the available login fields in jmbo-foundry
+JMBO_REQUIRED_FIELDS = frozenset(('username', 'mobile_number', 'email'))
 
                     
 @receiver(user_logged_out)
@@ -79,6 +82,8 @@ def create_consumer(sender, **kwargs):
         wrapper = ConsumerWrapper()
         for a in NEO_ATTR:
             getattr(wrapper, "set_%s" % a)(getattr(member, a))
+        wrapper.set_password(member.raw_password)
+        del member.raw_password
         try:
             consumer_id, uri = api.create_consumer(wrapper.consumer)
             neo_profile = NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
@@ -132,6 +137,15 @@ def load_consumer(sender, *args, **kwargs):
 
         # update instance with Neo attributes
         for key, val in member.iteritems():
-            # don't override the hashed django password
-            if key != 'password':
-                setattr(instance, key, val)
+            setattr(instance, key, val)
+
+'''
+Patch the user class so that the clear text
+password is stored on the object, thus making
+it accessible by Neo.
+'''
+def set_password(user, raw_password):
+    user.raw_password = raw_password
+    user.password = make_password(raw_password)
+
+User.set_password = set_password

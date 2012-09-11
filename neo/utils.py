@@ -204,7 +204,7 @@ class ConsumerWrapper(object):
         self._get_or_create_account().LoginCredentials.LoginName = username
         
     def set_password(self, password, mod_flag=modify_flag['INSERT']):
-        self._get_or_create_account().LoginCredentials.Password = password.split("$")[-1]
+        self._get_or_create_account().LoginCredentials.Password = password
         
     def set_email(self, email, mod_flag=modify_flag['INSERT']):
         if email:

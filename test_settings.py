@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.gis',
     'category',
+    'preferences',
     'jmbo',
     'photologue',
     'secretballot',
@@ -46,3 +47,5 @@ AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend',)
 STATIC_URL = 'static/'
 
 SITE_ID = 1
+
+ROOT_URLCONF = 'foundry.urls'
