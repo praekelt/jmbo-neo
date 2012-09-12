@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sites',
     'django.contrib.gis',
+    'django.contrib.sessions',
     'category',
     'preferences',
     'jmbo',
@@ -41,8 +42,6 @@ NEO = {
     'BRAND_ID': 35,
     'PASSWORD': 'PraJWTRegApp@67125_19092011',
 }
-
-AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend',)
 
 STATIC_URL = 'static/'
 

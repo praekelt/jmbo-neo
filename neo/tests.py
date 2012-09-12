@@ -5,7 +5,9 @@ from django.test import TestCase
 from django.test.client import Client
 from django.utils import timezone
 from django.core.cache import cache
+from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.contrib.sessions.models import Session
 
 from foundry.models import Member, Country
 from neo.models import NeoProfile, NEO_ATTR
@@ -83,9 +85,17 @@ class NeoTestCase(TestCase):
 
     def test_login(self):
         member = self.create_member()
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+        self.assertTrue(self.client.login(username=member.username, password='password'))
+        Session.objects.all().delete()
+        settings.AUTHENTICATION_BACKENDS = ('foundry.backends.MultiBackend', )
+        self.assertTrue(self.client.login(username=member.username, password='password'))
+        Session.objects.all().delete()
+        settings.AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
 
     def test_logout(self):
         member = self.create_member()
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
         self.client.login(username=member.username, password='password')
         self.client.logout()

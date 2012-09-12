@@ -10,7 +10,7 @@ class NeoBackend(MultiBackend):
     
     def authenticate(self, username=None, password=None):
         obj = None
-        
+
         for klass, fieldnames in self._authentication_chain:
             for fieldname in fieldnames:
                 try:
@@ -31,7 +31,7 @@ class NeoBackend(MultiBackend):
             user = obj
         else:
             user = obj.user
-        
+
         # Authenticate via Neo instead of Django
         consumer_id = authenticate_neo(user.username, password)
         if consumer_id:
