@@ -236,8 +236,12 @@ def change_password(username, new_password, old_password=None, token=None):
         params['temptoken'] = token
     else:
         raise ValueError("Either the old password or the forgot password token needs to be specified.")
+    new_headers = dict(HEADERS)
+    del new_headers['content-type']
+    new_headers['content-length'] = '0'
     response = requests.put("%s/consumers/useraccount" % (BASE_URL, ), \
-        params=params, headers=HEADERS)
+        params=params, headers=new_headers)
+
     if response.status_code == 200:
         return response.text
     

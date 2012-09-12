@@ -10,8 +10,9 @@ from django.core.urlresolvers import reverse
 from django.contrib.sessions.models import Session
 
 from foundry.models import Member, Country
-from neo.models import NeoProfile, NEO_ATTR
 
+from neo.models import NeoProfile, NEO_ATTR
+from neo.utils import NeoTokenGenerator
 
 class NeoTestCase(TestCase):
 
@@ -26,8 +27,8 @@ class NeoTestCase(TestCase):
             'last_name': 'lastname',
             'dob': timezone.now().date() - timedelta(days=22 * 365),
             'country': country,
-            'mobile_number': '7733387786',
-            'email': 'firstname@test.com',
+            'mobile_number': '+27733416692',
+            'email': 'rizmari@praekeltconsulting.com',
         }
 
     def create_member(self):
@@ -38,7 +39,12 @@ class NeoTestCase(TestCase):
         member.set_password('password')
         member.save()
         return member
-        
+
+    def login_basic(self, member):
+        Session.objects.all().delete()
+        settings.AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
+        return self.client.login(username=member.username, password='password')
+
     def test_create_member(self):
         member = self.create_member()
         self.assertEqual(NeoProfile.objects.filter(user=member.id).count(), 1)
@@ -90,12 +96,38 @@ class NeoTestCase(TestCase):
         Session.objects.all().delete()
         settings.AUTHENTICATION_BACKENDS = ('foundry.backends.MultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
-        Session.objects.all().delete()
-        settings.AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
-        self.assertTrue(self.client.login(username=member.username, password='password'))
+        self.assertTrue(self.login_basic(member))
 
     def test_logout(self):
         member = self.create_member()
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
         self.client.login(username=member.username, password='password')
         self.client.logout()
+
+    def test_password_change(self):
+        member = self.create_member()
+        self.login_basic(member)
+        response = self.client.post(reverse('password_change'), {'old_password': 'password',
+            'new_password1': 'new_password', 'new_password2': 'new_password'})
+        self.assertEqual(response.status_code, 302)
+
+    def test_forgot_password_token(self):
+        member = self.create_member()
+        token_generator = NeoTokenGenerator()
+        self.assertTrue(token_generator.make_token(member))
+
+    def test_reset_password(self):
+        member = self.create_member()
+        self.login_basic(member)
+        response = self.client.post(reverse('password_reset'), {'mobile_number': '+27733416692'})
+        self.assertEqual(response.status_code, 200)
+
+    def test_reset_password_confirm(self):
+        member = self.create_member()
+        token_generator = NeoTokenGenerator()
+        token = token_generator.make_token(member)
+        if token_generator.check_token(member, token):
+            member.set_password('new_password')
+            member.save()
+        else:
+            self.assertTrue(False)

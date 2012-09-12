@@ -47,4 +47,4 @@ STATIC_URL = 'static/'
 
 SITE_ID = 1
 
-ROOT_URLCONF = 'foundry.urls'
+ROOT_URLCONF = 'neo.urls'

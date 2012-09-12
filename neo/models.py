@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.contrib.auth.hashers import make_password
 
 from foundry.models import Member, Country
+from foundry.forms import PasswordResetForm
 
 from neo import api
 from neo.utils import ConsumerWrapper
@@ -107,11 +108,19 @@ def create_consumer(sender, **kwargs):
                         getattr(wrapper, "set_%s" % k)(old, mod_flag=modify_flag['DELETE'])
                     else:
                         getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['UPDATE'])
-        try:
-            consumer_id = NeoProfile.objects.get(user=member)
-            api.update_consumer(consumer_id, wrapper.consumer)
-        except api.NeoError:
-            pass
+
+        consumer_id = NeoProfile.objects.get(user=member)
+        api.update_consumer(consumer_id, wrapper.consumer)
+        
+        # check if password needs to be changed
+        raw_password = getattr(member, 'raw_password', None)
+        if raw_password:
+            old_password = getattr(member, 'old_password', None)
+            if old_password:
+                api.change_password(member.username, raw_password, old_password=old_password)
+            else:
+                api.change_password(member.username, raw_password, token=member.forgot_password_token)
+            
 
     # cache this member after it is saved (thus created/updated successfully)
     cache.set(cache_key, dict((k, getattr(member, k, None)) \
@@ -144,7 +153,13 @@ Patch the user class so that the clear text
 password is stored on the object, thus making
 it accessible by Neo.
 '''
-def set_password(user, raw_password):
+def set_password(user, raw_password, old_password=None):
+    try:
+        NeoProfile.objects.get(user=user)
+        if old_password:
+            user.old_password = old_password
+    except NeoProfile.DoesNotExist:
+        pass
     user.raw_password = raw_password
     user.password = make_password(raw_password)
 
