@@ -11,7 +11,6 @@ setup(
     url='http://github.com/praekelt/jmbo-neo',
     packages = find_packages(),
     install_requires = [
-        'jmbo',
         'jmbo-foundry',
         'django-ckeditor',
         'requests',

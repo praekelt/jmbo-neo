@@ -33,13 +33,13 @@ INSTALLED_APPS = [
     'foundry',
     'neo',
 ]
-
+#'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
 NEO = {
     'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
     'APP_ID': '67125',
     'VERSION_ID': '1.3',
     'PROMO_CODE': 'testPromo',
-    'BRAND_ID': 35,
+    'BRAND_ID': 12,
     'PASSWORD': 'PraJWTRegApp@67125_19092011',
 }
 
