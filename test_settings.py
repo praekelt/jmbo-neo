@@ -35,12 +35,13 @@ INSTALLED_APPS = [
 ]
 #'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
 NEO = {
-    'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
+    'URL': 'https://209.207.228.8/neowebservices',
     'APP_ID': '67125',
     'VERSION_ID': '1.3',
     'PROMO_CODE': 'testPromo',
     'BRAND_ID': 12,
     'PASSWORD': 'PraJWTRegApp@67125_19092011',
+    'USE_MCAL': False,
 }
 
 STATIC_URL = 'static/'

@@ -18,8 +18,9 @@ BASE_URL = '/'.join((CONFIG['URL'], CONFIG['APP_ID'], CONFIG['VERSION_ID']))
 requests.defaults.safe_mode = True
 # use basic http authentication
 HEADERS = {'content-type': 'application/xml'}
-HEADERS['Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'], CONFIG['PROMO_CODE'])))
-HEADERS['Proxy-Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'])))
+if CONFIG.get('USE_MCAL', False):
+    HEADERS['Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'], CONFIG['PROMO_CODE'])))
+    HEADERS['Proxy-Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'])))
 
 # the Neo exception that should be raised if a Neo communication fails
 class NeoError(Exception):
