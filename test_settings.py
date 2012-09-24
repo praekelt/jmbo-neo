@@ -42,6 +42,7 @@ NEO = {
     'BRAND_ID': 12,
     'PASSWORD': 'PraJWTRegApp@67125_19092011',
     'USE_MCAL': False,
+    'VERIFY_CERT': False,
 }
 
 STATIC_URL = 'static/'
