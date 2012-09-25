@@ -278,10 +278,10 @@ class ConsumerWrapper(object):
             if a.AddressType == address_type['HOME']:
                 if mod_flag != modify_flag['DELETE']:
                     a.Address1 = address_line
-                    a.City = city.name
+                    a.City = city
                     a.StateOther = state
                     a.ZipCode = zipcode
-                    a.Country = country_option_id[country.country_code]
+                    a.Country = country.country_code
                 a.ModifyFlag = mod_flag
                 updated = True
                 break
@@ -289,15 +289,15 @@ class ConsumerWrapper(object):
             profile.add_Address(AddressDetailsType(
                 AddressType = address_type['HOME'],
                 Address1 = address_line,
-                City = city.name,
+                City = city,
                 StateOther = state,
                 ZipCode = zipcode,
-                Country = country_option_id[country.country_code],
+                Country = country.country_code,
                 ModifyFlag = mod_flag,
             ))
     
-    def set_gender(self, gender, mod_flag=modify_flag['INSERT']):
-        self._get_or_create_profile().Gender = gender['MALE'] if gender == 'M' else gender['FEMALE']
+    def set_gender(self, gendr, mod_flag=modify_flag['INSERT']):
+        self._get_or_create_profile().Gender = gender['MALE'] if gendr == 'M' else gender['FEMALE']
 
     def set_email(self, email, mod_flag=modify_flag['INSERT']):
         if email:
