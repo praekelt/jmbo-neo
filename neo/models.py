@@ -100,6 +100,7 @@ def create_consumer(sender, **kwargs):
 
         consumer_id, uri = api.create_consumer(wrapper.consumer)
         neo_profile = NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
+        api.complete_registration(consumer_id)  # activates the account
 
 
     else:
