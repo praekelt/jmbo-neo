@@ -28,8 +28,6 @@ class NeoTestCase(TestCase):
             'last_name': 'lastname',
             'dob': timezone.now().date() - timedelta(days=22 * 365),
             'country': country,
-            'mobile_number': '+27733416692',
-            'email': 'rizmari@praekeltconsulting.com',
             'address': 'address',
             'city': 'city',
             'province': 'province',
@@ -40,8 +38,12 @@ class NeoTestCase(TestCase):
     def create_member(self):
         attrs = self.member_attrs.copy()
         # unique email and username for this test run
-        attrs['username'] = 'user_%s' % timezone.now().strftime("%H:%M:%S.%f")
-        attrs['email'] = "%f@praekeltconsulting.com" % time.time()
+        id = "%f" % time.time()
+        dot = id.rindex('.')
+        id = id[dot - 7:dot] + id[dot+1:dot+4]
+        attrs['username'] = 'user_%s' % id
+        attrs['email'] = "%s@praekeltconsulting.com" % id
+        attrs['mobile_number'] = id
         member = Member(**attrs)
         member.set_password('password')
         member.save()
