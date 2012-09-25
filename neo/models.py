@@ -150,9 +150,9 @@ def create_consumer(sender, **kwargs):
                     mod_flag=modify_flag['UPDATE'])
 
         if not wrapper.is_empty:
+	    consumer_id = NeoProfile.objects.get(user=member).consumer_id
             if not wrapper.profile_is_empty:
                 wrapper.set_ids_for_profile(api.get_consumer_profile(consumer_id))
-            consumer_id = NeoProfile.objects.get(user=member).consumer_id
             api.update_consumer(consumer_id, wrapper.consumer)
         
         # check if password needs to be changed

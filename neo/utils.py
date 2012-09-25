@@ -4,6 +4,8 @@ from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.auth.forms import PasswordChangeForm
 
+from foundry.models import Country
+
 from neo.constants import country_option_id, address_type, gender, marital_status, \
     modify_flag, phone_type, email_category, comm_channel, question_category
 from neo.xml import Consumer, ConsumerProfileType, PreferencesType, UserAccountType, \
@@ -74,11 +76,11 @@ class ConsumerWrapper(object):
     
     @property
     def is_empty(self):
-        return (self._consumer.ConsumerProfile or self._consumer.UserAccount or self._consumer.Preferences)
+        return not (self._consumer.ConsumerProfile or self._consumer.UserAccount or self._consumer.Preferences)
     
     @property
     def profile_is_empty(self):
-        return True if self._consumer.ConsumerProfile else False
+        return not self._consumer.ConsumerProfile
 
     def _get_preference(self, category_id, question_id):
         if self._consumer.Preferences is not None:
@@ -140,7 +142,8 @@ class ConsumerWrapper(object):
             )
             self._set_preference(answer, question_category['OPTIN'], question_id, mod_flag)
     
-    def set_ids_for_profile(self, profile):
+    def set_ids_for_profile(self, consumer):
+	profile = consumer.ConsumerProfile
         if self.address and self._consumer.ConsumerProfile.Address[0].ModifyFlag != 'I':
             self._consumer.ConsumerProfile.Address[0].AddressID = profile.Address[0].AddressID
         if self.email:
