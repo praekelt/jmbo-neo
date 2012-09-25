@@ -30,9 +30,11 @@ NEO_ATTR = frozenset(('username', 'first_name', \
     'receive_sms', 'receive_email', 'country', \
     'gender'))
 
+# These fields are used together to create an address and don't exist as individual neo attributes
+ADDRESS_FIELDS = frozenset(('city', 'country', 'province', 'zipcode', 'address'))
+
 # These fields correspond to the available login fields in jmbo-foundry
 JMBO_REQUIRED_FIELDS = frozenset(('username', 'mobile_number', 'email'))
-
                     
 @receiver(user_logged_out)
 def notify_logout(sender, **kwargs):
@@ -90,8 +92,8 @@ def create_consumer(sender, **kwargs):
 
         # assign address
         has_address = False
-        for m_attr in ('city', 'country', 'province', 'zipcode', 'address'):
-            if getattr(member, m_attr, None):
+        for k in ADDRESS_FIELDS:
+            if getattr(member, k, None):
                 has_address = True
                 break
         if has_address:
@@ -121,31 +123,34 @@ def create_consumer(sender, **kwargs):
                     else:
                         getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['UPDATE'])
 
-        # check if the member has an address
+        # check if address needs to change
         has_address = False
-        for m_attr in ('city', 'country', 'province', 'zipcode', 'address'):
-            if getattr(member, m_attr, None):
+        had_address = False
+        address_changed = False
+        for k in ADDRESS_FIELDS:
+            current = getattr(member, k, None)
+            old = old_member.get(k, None)
+            if current:
                 has_address = True
-                break
-        address = wrapper.address
-        # insert an address
-        if not address:
-            # insert an address
-            if has_address:
+            if old:
+                had_address = True
+            if current != old:
+                address_changed = True
+        # update address accordingly
+        if address_changed:
+            if not has_address:
+                wrapper.set_address(old_member.address, old_member.city,
+                    old_member.province, old_member.zipcode, old_member.country,
+                    modify_flag['DELETE'])
+            elif not had_address:
                 wrapper.set_address(member.address, member.city,
                     member.province, member.zipcode, member.country)
-        else:
-            # delete address
-            if not has_address:
-                wrapper.set_address(None, None, None, None, None, modify_flag['DELETE'])
-            # check if address needs to be modified
             else:
-                kwargs = {}
-                for m_attr in ('city', 'country', 'province', 'zipcode', 'address'):
-                    kwargs[m_attr] = getattr(member, m_attr, None) if m_attr != 'country' else country_option_id[member.country.country_code]
-                wrapper.set_address(mod_flag=modify_flag['UPDATE'], **kwargs)
+                wrapper.set_address(member.address, member.city,
+                    member.province, member.zipcode, member.country,
+                    mod_flag=modify_flag['UPDATE'])
 
-        consumer_id = NeoProfile.objects.get(user=member)
+        consumer_id = NeoProfile.objects.get(user=member).consumer_id
         api.update_consumer(consumer_id, wrapper.consumer)
         
         # check if password needs to be changed
@@ -160,7 +165,7 @@ def create_consumer(sender, **kwargs):
 
     # cache this member after it is saved (thus created/updated successfully)
     cache.set(cache_key, dict((k, getattr(member, k, None)) \
-        for k in NEO_ATTR), 1200)
+        for k in NEO_ATTR.union(ADDRESS_FIELDS)), 1200)
 
 
 @receiver(signals.post_init, sender=Member)
@@ -177,6 +182,7 @@ def load_consumer(sender, *args, **kwargs):
             consumer = api.get_consumer(consumer_id)
             wrapper = ConsumerWrapper(consumer=consumer)
             member=dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
+            member.update(wrapper.address) # special case
             # cache the neo member dictionary
             cache.set(cache_key, member, 1200)
 
