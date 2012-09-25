@@ -72,6 +72,14 @@ class ConsumerWrapper(object):
             self._consumer.Preferences = PreferencesType()
         return self._consumer.Preferences
     
+    @property
+    def is_empty(self):
+        return (self._consumer.ConsumerProfile or self._consumer.UserAccount or self._consumer.Preferences)
+    
+    @property
+    def profile_is_empty(self):
+        return True if self._consumer.ConsumerProfile else False
+
     def _get_preference(self, category_id, question_id):
         if self._consumer.Preferences is not None:
             for cat in self._consumer.Preferences.QuestionCategory:
@@ -88,12 +96,6 @@ class ConsumerWrapper(object):
                 if a.CommunicationChannel == comm_channel:
                     return a.OptionID == 1
         return None
-
-    '''def _get_profile_answer(self, question_id):
-        answers = self._get_preference(question_category['PROFILE'], question_id)
-        if answers:
-            return answers[0].AnswerText   
-        return None'''
     
     def _set_preference(self, answer, category_id, question_id, mod_flag):
         prefs = self._get_or_create_preferences()
@@ -138,19 +140,26 @@ class ConsumerWrapper(object):
             )
             self._set_preference(answer, question_category['OPTIN'], question_id, mod_flag)
     
-    '''def _set_profile_answer(self, value, question_id, mod_flag):
-        answers = self._get_preference(question_category['PROFILE'], question_id)
-        updated = False
-        if answers:
-            a = answers[0]
-            # don't set the value to None (mod_flag should be 'D' to remove it)
-            a.AnswerText = value if value else a.AnswerText
-            a.ModifyFlag = mod_flag
-            updated = True
-        if not updated:
-            answer = AnswerType(AnswerText=value)
-            self._set_preference(answer, question_category['PROFILE'], question_id, mod_flag)'''
-            
+    def set_ids_for_profile(self, profile):
+        if self.address and self._consumer.ConsumerProfile.Address[0].ModifyFlag != 'I':
+            self._consumer.ConsumerProfile.Address[0].AddressID = profile.Address[0].AddressID
+        if self.email:
+            for email in self._consumer.ConsumerProfile.Email:
+                if email.EmailCategory == email_category['PERSONAL'] and email.ModifyFlag != 'I':
+                    for em in profile.Email:
+                        if em.EmailCategory == email_category['PERSONAL']:
+                            email.Id = em.Id
+                            break
+        if self.mobile_number:
+            for email in self._consumer.ConsumerProfile.Email:
+                if email.EmailCategory == email_category['MOBILE_NO'] and email.ModifyFlag != 'I':
+                    for em in profile.Email:
+                        if em.EmailCategory == email_category['MOBILE_NO']:
+                            email.Id = em.Id
+                            break
+            if self._consumer.ConsumerProfile.Phone[0].ModifyFlag != 'I':
+                self._consumer.ConsumerProfile.Phone[0].PhoneID = profile.Phone[0].PhoneID
+
     @property
     def consumer(self):
         return self._consumer
@@ -224,7 +233,7 @@ class ConsumerWrapper(object):
                     'country': Country.objects.get(country_code=a.Country),
                     'address': a.Address1,
                 }
-        return {'city': None, 'province': None, 'zipcode': None, 'country': None, 'address': None}
+        return {}
 
     @property
     def gender(self):

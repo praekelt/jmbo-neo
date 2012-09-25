@@ -104,7 +104,6 @@ def create_consumer(sender, **kwargs):
         neo_profile = NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
         api.complete_registration(consumer_id)  # activates the account
 
-
     else:
         # update changed attributes
         old_member = cache.get(cache_key, None)
@@ -150,8 +149,11 @@ def create_consumer(sender, **kwargs):
                     member.province, member.zipcode, member.country,
                     mod_flag=modify_flag['UPDATE'])
 
-        consumer_id = NeoProfile.objects.get(user=member).consumer_id
-        api.update_consumer(consumer_id, wrapper.consumer)
+        if not wrapper.is_empty:
+            if not wrapper.profile_is_empty:
+                wrapper.set_ids_for_profile(api.get_consumer_profile(consumer_id))
+            consumer_id = NeoProfile.objects.get(user=member).consumer_id
+            api.update_consumer(consumer_id, wrapper.consumer)
         
         # check if password needs to be changed
         raw_password = getattr(member, 'raw_password', None)
