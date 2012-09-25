@@ -11,7 +11,7 @@ from foundry.forms import PasswordResetForm
 
 from neo import api
 from neo.utils import ConsumerWrapper
-from neo.constants import modify_flag
+from neo.constants import modify_flag, country_option_id
 
 
 class NeoProfile(models.Model):
@@ -23,10 +23,12 @@ class NeoProfile(models.Model):
 The member attributes that are stored on Neo and in memcached
 NB. These attributes must be required during registration for any Neo app
 NB. Password is a special case and is handled separately
+NB. Address, city and province are also special cases
 '''
 NEO_ATTR = frozenset(('username', 'first_name', \
     'last_name', 'dob', 'email', 'mobile_number', \
-    'receive_sms', 'receive_email', 'country'))
+    'receive_sms', 'receive_email', 'country', \
+    'gender'))
 
 # These fields correspond to the available login fields in jmbo-foundry
 JMBO_REQUIRED_FIELDS = frozenset(('username', 'mobile_number', 'email'))
@@ -85,6 +87,15 @@ def create_consumer(sender, **kwargs):
             getattr(wrapper, "set_%s" % a)(getattr(member, a))
         wrapper.set_password(member.raw_password)
         del member.raw_password
+        # assign address
+        has_address = False
+        for m_attr in ('city', 'country', 'province', 'zipcode', 'address'):
+            if getattr(member, m_attr, None):
+                has_address = True
+                break
+        if has_address:
+            wrapper.set_address(member.address, member.city,
+                member.province, member.zipcode, member.country)
         try:
             consumer_id, uri = api.create_consumer(wrapper.consumer)
             neo_profile = NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
@@ -108,6 +119,31 @@ def create_consumer(sender, **kwargs):
                         getattr(wrapper, "set_%s" % k)(old, mod_flag=modify_flag['DELETE'])
                     else:
                         getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['UPDATE'])
+
+        # check if the member has an address
+        has_address = False
+        for m_attr in ('city', 'country', 'province', 'zipcode', 'address'):
+            if getattr(member, m_attr, None):
+                has_address = True
+                break
+        address = wrapper.address
+        # insert an address
+        if not address:
+            # insert an address
+            if has_address:
+                wrapper.set_address(member.address, member.city,
+                    member.province, member.zipcode, member.country)
+        else:
+            # delete address
+            if not has_address:
+                wrapper.set_address(None, None, None, None, None, modify_flag['DELETE'])
+            # check if address needs to be modified
+            else:
+                kwargs = {}
+                for m_attr in ('city', 'country', 'province', 'zipcode', 'address'):
+                    kwargs[m_attr] = getattr(member, m_attr, None) if m_attr != 'country'
+                        else country_option_id[member.country.country_code]
+                 wrapper.set_address(mod_flag=modify_flag['UPDATE'], **kwargs)
 
         consumer_id = NeoProfile.objects.get(user=member)
         api.update_consumer(consumer_id, wrapper.consumer)

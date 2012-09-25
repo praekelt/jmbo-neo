@@ -215,7 +215,8 @@ class ConsumerWrapper(object):
     @property
     def address(self):
         if self._consumer.ConsumerProfile is not None:
-            return self._consumer.ConsumerProfile.Address
+            if self._consumer.ConsumerProfile.Address:
+                return self._consumer.ConsumerProfile.Address[0]
         return None
     
     @property
@@ -275,11 +276,12 @@ class ConsumerWrapper(object):
         updated = False
         for a in profile.Address:
             if a.AddressType == address_type['HOME']:
-                a.Address1 = address_line
-                a.City = city.name
-                a.State = state
-                a.ZipCode = zipcode
-                a.Country = country_option_id[country.country_code]
+                if mod_flag != modify_flag['DELETE']
+                    a.Address1 = address_line
+                    a.City = city.name
+                    a.StateOther = state
+                    a.ZipCode = zipcode
+                    a.Country = country_option_id[country.country_code]
                 a.ModifyFlag = mod_flag
                 updated = True
                 break
@@ -288,7 +290,7 @@ class ConsumerWrapper(object):
                 AddressType = address_type['HOME'],
                 Address1 = address_line,
                 City = city.name,
-                State = state,
+                StateOther = state,
                 ZipCode = zipcode,
                 Country = country_option_id[country.country_code],
                 ModifyFlag = mod_flag,
