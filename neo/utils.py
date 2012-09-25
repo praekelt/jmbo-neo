@@ -8,7 +8,7 @@ from neo.constants import country_option_id, address_type, gender, marital_statu
     modify_flag, phone_type, email_category, comm_channel, question_category
 from neo.xml import Consumer, ConsumerProfileType, PreferencesType, UserAccountType, \
     EmailDetailsType, PhoneDetailsType, AnswerType, CategoryType, LoginCredentialsType, \
-    QuestionAnswerType
+    QuestionAnswerType, AddressDetailsType
 from neo import api
 
 
@@ -83,11 +83,17 @@ class ConsumerWrapper(object):
         
     def _get_opt_in(self, question_id, brand_id, comm_channel):
         answers = self._get_preference(question_category['OPTIN'], question_id)
-        if answers is not None:
+        if answers:
             for a in answers:
                 if a.CommunicationChannel == comm_channel:
                     return a.OptionID == 1
         return None
+
+    '''def _get_profile_answer(self, question_id):
+        answers = self._get_preference(question_category['PROFILE'], question_id)
+        if answers:
+            return answers[0].AnswerText   
+        return None'''
     
     def _set_preference(self, answer, category_id, question_id, mod_flag):
         prefs = self._get_or_create_preferences()
@@ -117,7 +123,7 @@ class ConsumerWrapper(object):
     def _set_opt_in(self, value, question_id, brand_id, comm_channel, mod_flag):
         answers = self._get_preference(question_category['OPTIN'], question_id)
         updated = False
-        if answers is not None:
+        if answers:
             for a in answers:
                 if a.BrandID == brand_id and a.CommunicationChannel == comm_channel:
                     a.OptionID = 1 if value else 2
@@ -131,6 +137,19 @@ class ConsumerWrapper(object):
                 CommunicationChannel=comm_channel
             )
             self._set_preference(answer, question_category['OPTIN'], question_id, mod_flag)
+    
+    '''def _set_profile_answer(self, value, question_id, mod_flag):
+        answers = self._get_preference(question_category['PROFILE'], question_id)
+        updated = False
+        if answers:
+            a = answers[0]
+            # don't set the value to None (mod_flag should be 'D' to remove it)
+            a.AnswerText = value if value else a.AnswerText
+            a.ModifyFlag = mod_flag
+            updated = True
+        if not updated:
+            answer = AnswerType(AnswerText=value)
+            self._set_preference(answer, question_category['PROFILE'], question_id, mod_flag)'''
             
     @property
     def consumer(self):
@@ -194,6 +213,18 @@ class ConsumerWrapper(object):
         return None
     
     @property
+    def address(self):
+        if self._consumer.ConsumerProfile is not None:
+            return self._consumer.ConsumerProfile.Address
+        return None
+    
+    @property
+    def gender(self):
+        if self._consumer.ConsumerProfile is not None:
+            return self._consumer.ConsumerProfile.Gender
+        return None
+    
+    @property
     def username(self):
         if self._consumer.UserAccount is not None:
             return self._consumer.UserAccount.LoginCredentials.LoginName
@@ -203,7 +234,7 @@ class ConsumerWrapper(object):
     def password(self):
         if self._consumer.UserAccount is not None:
             return self._consumer.UserAccount.LoginCredentials.Password
-        return None  
+        return None
     
     def set_receive_sms(self, value, mod_flag=modify_flag['INSERT']):
         if value is not None:
@@ -238,7 +269,39 @@ class ConsumerWrapper(object):
         
     def set_password(self, password, mod_flag=modify_flag['INSERT']):
         self._get_or_create_account().LoginCredentials.Password = password
-        
+    
+    def set_address(self, address_line, city, state, zipcode, country, mod_flag=modify_flag['INSERT']):
+        profile = self._get_or_create_profile()
+        updated = False
+        for a in profile.Address:
+            if a.AddressType == address_type['HOME']:
+                a.Address1 = address_line
+                a.City = city.name
+                a.State = state
+                a.ZipCode = zipcode
+                a.Country = country_option_id[country.country_code]
+                a.ModifyFlag = mod_flag
+                updated = True
+                break
+        if not updated:
+            profile.add_Address(AddressDetailsType(
+                AddressType = address_type['HOME'],
+                Address1 = address_line,
+                City = city.name,
+                State = state,
+                ZipCode = zipcode,
+                Country = country_option_id[country.country_code],
+                ModifyFlag = mod_flag,
+            ))
+    
+    def set_gender(self, gender, mod_flag=modify_flag['INSERT']):
+        if isinstance(gender, basestring):
+            try:
+                gender = int(gender)
+            except ValueError:
+                gender = gender['MALE'] if gender.lower() == 'm' else gender['FEMALE']
+        self._get_or_create_profile().Gender = gender
+
     def set_email(self, email, mod_flag=modify_flag['INSERT']):
         if email:
             prof = self._get_or_create_profile()

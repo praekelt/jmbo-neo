@@ -84,7 +84,7 @@ def create_consumer(consumer):
         uri = response.headers["Location"]
         match = re.search(r"/consumers/(?P<id>\d+)/", uri)
         if match:
-            return match.group('id'), uri  
+            return match.group('id'), uri
     else:
         raise NeoError("In create_consumer: %s %s" % (response.status_code, response.text))
 
