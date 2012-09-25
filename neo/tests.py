@@ -38,8 +38,9 @@ class NeoTestCase(TestCase):
 
     def create_member(self):
         attrs = self.member_attrs.copy()
-        # unique username for this test run
+        # unique email and username for this test run
         attrs['username'] = 'user_%s' % timezone.now().strftime("%H:%M:%S.%f")
+        attrs['email'] = "%s@praekeltconsulting.com" % attrs['username']
         member = Member(**attrs)
         member.set_password('password')
         member.save()
