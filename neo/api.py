@@ -46,9 +46,9 @@ def authenticate(username=None, password=None, token=None, promo_code=None, acq_
     response = requests.get("%s/consumers/useraccount" % (BASE_URL, ), \
         params=params, **r_kwargs)
     if response.status_code == 200:
-        return response.text  # response body contains consumer_id
+        return response.content  # response body contains consumer_id
     elif response.status_code == 400:  # bad request
-        raise NeoError("In authenticate: %s %s" % (response.status_code, response.text))
+        raise NeoError("In authenticate: %s %s" % (response.status_code, response.content))
     return None
 
 
@@ -60,7 +60,7 @@ def logout(consumer_id, promo_code=None, acq_src=None):
     response = requests.put("%s/consumers/%s/useraccount/notifylogout" % (BASE_URL, consumer_id),
         params=params, **r_kwargs)
     if response.status_code != 200:
-        raise NeoError("In logout: %s %s" % (response.status_code, response.text))
+        raise NeoError("In logout: %s %s" % (response.status_code, response.content))
 
 
 # stores a remember me token on Neo server
@@ -68,7 +68,7 @@ def remember_me(consumer_id, token):
     response = requests.put("%s/consumers/%s/useraccount" % (BASE_URL, consumer_id),
         params={'authtoken': token}, **r_kwargs)
     if response.status_code != 200:
-        raise NeoError("In remember_me: %s %s" % (response.status_code, response.text))
+        raise NeoError("In remember_me: %s %s" % (response.status_code, response.content))
 
 
 # creates a consumer and returns the consumer id and validation uri
@@ -86,7 +86,7 @@ def create_consumer(consumer):
         if match:
             return match.group('id'), uri
     else:
-        raise NeoError("In create_consumer: %s %s" % (response.status_code, response.text))
+        raise NeoError("In create_consumer: %s %s" % (response.status_code, response.content))
 
 
 # activates the newly created consumer account, optionally using a validation uri
@@ -97,7 +97,7 @@ def complete_registration(consumer_id, uri=None):
     else:
         response = requests.get(uri)
     if response.status_code != 200:
-        raise NeoError("In complete_registration: %s %s" % (response.status_code, response.text))
+        raise NeoError("In complete_registration: %s %s" % (response.status_code, response.content))
 
 
 # retrieves a list of consumers' identified by email/mobile id and DOB
@@ -108,12 +108,12 @@ def get_consumers(email_id, dob):
         params = {'dateofbirth': dob_str, 'emailid': email_id}, **r_kwargs)
     if response.status_code == 200:
         try:
-            consumers = parseString(response.text).Consumer
+            consumers = parseString(response.content).Consumer
             return [o.__dict__ for o in consumers]
         except GDSParseError:
             pass
     
-    raise NeoError("In get_consumers: %s %s" % (response.status_code, response.text))
+    raise NeoError("In get_consumers: %s %s" % (response.status_code, response.content))
 
 
 # links a consumer account from another app with this app
@@ -129,11 +129,11 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
         params=params, **r_kwargs)
     if response.status_code == 200:
         try:
-            return parseString(response.text)
+            return parseString(response.content)
         except GDSParseError:
             pass
 
-    raise NeoError("In link_consumer: %s %s" % (response.status_code, response.text))
+    raise NeoError("In link_consumer: %s %s" % (response.status_code, response.content))
 
 
 # get a consumer object containing all the consumer data
@@ -142,11 +142,11 @@ def get_consumer(consumer_id):
         **r_kwargs)
     if response.status_code == 200:
         try:
-            return parseString(response.text)
+            return parseString(response.content)
         except GDSParseError:
             pass
     
-    raise NeoError("In get_consumer: %s %s" % (response.status_code, response.text))
+    raise NeoError("In get_consumer: %s %s" % (response.status_code, response.content))
 
 
 # get a consumer's profile
@@ -155,11 +155,11 @@ def get_consumer_profile(consumer_id):
         **r_kwargs)
     if response.status_code == 200:
         try:
-            return parseString(response.text)
+            return parseString(response.content)
         except GDSParseError:
             pass
     
-    raise NeoError("In get_consumer_profile: %s %s" % (response.status_code, response.text))
+    raise NeoError("In get_consumer_profile: %s %s" % (response.status_code, response.content))
 
 
 # get a consumer's preferences
@@ -171,11 +171,11 @@ def get_consumer_preferences(consumer_id, category_id=None):
     response = requests.get(uri, **r_kwargs)
     if response.status_code == 200:
         try:
-            return parseString(response.text)
+            return parseString(response.content)
         except GDSParseError:
             pass
 
-    raise NeoError("In get_consumer_preferences: %s %s" % (response.status_code, response.text))
+    raise NeoError("In get_consumer_preferences: %s %s" % (response.status_code, response.content))
 
 
 # update a consumer's data on the Neo server
@@ -187,7 +187,7 @@ def update_consumer(consumer_id, consumer):
         data=data_stream.getvalue(), **r_kwargs)
     data_stream.close()
     if response.status_code != 200:
-        raise NeoError("In update_consumer: %s %s" % (response.status_code, response.text))
+        raise NeoError("In update_consumer: %s %s" % (response.status_code, response.content))
 
 
 # create consumer preferences
@@ -205,7 +205,7 @@ def update_consumer_preferences(consumer_id, preferences, category_id=None, crea
         response = requests.put(uri, data=data_stream.getvalue(), **r_kwargs)
     data_stream.close()
     if response.status_code != 200:
-        raise NeoError("In update_consumer_preferences: %s %s" % (response.status_code, response.text))
+        raise NeoError("In update_consumer_preferences: %s %s" % (response.status_code, response.content))
 
 
 # deletes the consumer account
@@ -223,11 +223,11 @@ def get_forgot_password_token(username):
         params=params, **r_kwargs)
     if response.status_code == 200:
         try:
-            return parseString(response.text)
+            return parseString(response.content)
         except GDSParseError:
             pass
 
-    raise NeoError("In get_forgot_password_token: %s %s" % (response.status_code, response.text))
+    raise NeoError("In get_forgot_password_token: %s %s" % (response.status_code, response.content))
 
 
 # changes user's password, possibly using the token generated by get_forgot_password_token
@@ -249,9 +249,9 @@ def change_password(username, new_password, old_password=None, token=None):
         params=params, headers=new_headers)
 
     if response.status_code == 200:
-        return response.text
+        return response.content
     
-    raise NeoError("In change_password: %s %s" % (response.status_code, response.text))
+    raise NeoError("In change_password: %s %s" % (response.status_code, response.content))
 
 
 # unsubscribe from some brand or communication channel
@@ -264,7 +264,7 @@ def unsubscribe(consumer_id, unsubscribe_obj):
         data=data_stream.getvalue(), **r_kwargs)
     data_stream.close()
     if response.status_code != 200:
-        raise NeoError("In unsubscribe: %s %s" % (response.status_code, response.text))
+        raise NeoError("In unsubscribe: %s %s" % (response.status_code, response.content))
 
 
 # add a promo code to a consumer (from master promo code list)
@@ -275,7 +275,7 @@ def add_promo_code(consumer_id, promo_code, acq_src=None):
     response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id), \
         params=params, **r_kwargs)
     if response.status_code != 200:
-        raise NeoError("In add_promo_code: %s %s" % (response.status_code, response.text))
+        raise NeoError("In add_promo_code: %s %s" % (response.status_code, response.content))
 
 
 # check if the user is of allowable age
@@ -292,11 +292,11 @@ def do_age_check(dob, country_code, gateway_id, language_code=None):
         params=params, **r_kwargs)
     if response.status_code == 200:
         try:
-            return parseString(response.text)
+            return parseString(response.content)
         except GDSParseError:
             pass
         
-    raise NeoError("In do_age_check: %s %s" % (response.status_code, response.text))
+    raise NeoError("In do_age_check: %s %s" % (response.status_code, response.content))
 
 
 # get country details
@@ -311,9 +311,9 @@ def get_country(country_code=None, ip_address=None):
         params=params, **r_kwargs)
     if response.status_code == 200:
         try:
-            return parseString(response.text)
+            return parseString(response.content)
         except GDSParseError:
             pass
 
-    raise NeoError("In get_country: %s %s" % (response.status_code, response.text))
+    raise NeoError("In get_country: %s %s" % (response.status_code, response.content))
 
