@@ -87,6 +87,7 @@ def create_consumer(sender, **kwargs):
             getattr(wrapper, "set_%s" % a)(getattr(member, a))
         wrapper.set_password(member.raw_password)
         del member.raw_password
+
         # assign address
         has_address = False
         for m_attr in ('city', 'country', 'province', 'zipcode', 'address'):
@@ -96,11 +97,10 @@ def create_consumer(sender, **kwargs):
         if has_address:
             wrapper.set_address(member.address, member.city,
                 member.province, member.zipcode, member.country)
-        try:
-            consumer_id, uri = api.create_consumer(wrapper.consumer)
-            neo_profile = NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
-        except api.NeoError:
-            pass
+
+        consumer_id, uri = api.create_consumer(wrapper.consumer)
+        neo_profile = NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
+
 
     else:
         # update changed attributes
