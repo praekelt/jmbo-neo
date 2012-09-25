@@ -141,9 +141,8 @@ def create_consumer(sender, **kwargs):
             else:
                 kwargs = {}
                 for m_attr in ('city', 'country', 'province', 'zipcode', 'address'):
-                    kwargs[m_attr] = getattr(member, m_attr, None) if m_attr != 'country'
-                        else country_option_id[member.country.country_code]
-                 wrapper.set_address(mod_flag=modify_flag['UPDATE'], **kwargs)
+                    kwargs[m_attr] = getattr(member, m_attr, None) if m_attr != 'country' else country_option_id[member.country.country_code]
+                wrapper.set_address(mod_flag=modify_flag['UPDATE'], **kwargs)
 
         consumer_id = NeoProfile.objects.get(user=member)
         api.update_consumer(consumer_id, wrapper.consumer)

@@ -276,7 +276,7 @@ class ConsumerWrapper(object):
         updated = False
         for a in profile.Address:
             if a.AddressType == address_type['HOME']:
-                if mod_flag != modify_flag['DELETE']
+                if mod_flag != modify_flag['DELETE']:
                     a.Address1 = address_line
                     a.City = city.name
                     a.StateOther = state
@@ -297,8 +297,7 @@ class ConsumerWrapper(object):
             ))
     
     def set_gender(self, gender, mod_flag=modify_flag['INSERT']):
-        self._get_or_create_profile().Gender = gender['MALE'] if gender == 'M'
-            else gender['FEMALE']
+        self._get_or_create_profile().Gender = gender['MALE'] if gender == 'M' else gender['FEMALE']
 
     def set_email(self, email, mod_flag=modify_flag['INSERT']):
         if email:
