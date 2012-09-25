@@ -1,4 +1,5 @@
 import os.path
+import time
 from datetime import timedelta
 
 from django.test import TestCase
@@ -40,7 +41,7 @@ class NeoTestCase(TestCase):
         attrs = self.member_attrs.copy()
         # unique email and username for this test run
         attrs['username'] = 'user_%s' % timezone.now().strftime("%H:%M:%S.%f")
-        attrs['email'] = "%s@praekeltconsulting.com" % attrs['username']
+        attrs['email'] = "%f@praekeltconsulting.com" % time.time()
         member = Member(**attrs)
         member.set_password('password')
         member.save()
