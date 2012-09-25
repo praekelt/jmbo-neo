@@ -307,7 +307,7 @@ email_category = {
 
 # there are many more Diageo categories, but we only need these for now
 question_category = {
-    'PROFILE', 0,
+    'PROFILE': 0,
     'OPTIN': 1,
     'GENERAL': 4,
 }
