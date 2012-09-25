@@ -29,6 +29,11 @@ class NeoTestCase(TestCase):
             'country': country,
             'mobile_number': '+27733416692',
             'email': 'rizmari@praekeltconsulting.com',
+            'address': 'address',
+            'city': 'city',
+            'province': 'province',
+            'zipcode': 'zipcode',
+            'gender': 'F',
         }
 
     def create_member(self):

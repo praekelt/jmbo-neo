@@ -10,6 +10,9 @@ setup(
     license='BSD',
     url='http://github.com/praekelt/jmbo-neo',
     packages = find_packages(),
+    dependency_links = [
+        'http://github.com/praekelt/jmbo-foundry/tarball/feature/add_address_gender_to_member/2.6.praekelt#egg=jmbo-foundry-2.6.praekelt',
+    ]
     install_requires = [
         'jmbo-foundry',
         'django-ckeditor',
