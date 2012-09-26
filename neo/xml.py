@@ -4388,6 +4388,7 @@ __all__ = [
     "UserAccountType",
     "CommunicationChannelDetailsType",
     "ConsumerDetailsType",
+    "UserIdentificationDataType",
     "UnsubscribePreferenceType",
     "UnsubscribePreferencesType",
     "CountryType",
