@@ -365,6 +365,132 @@ def _cast(typ, value):
 # Data representation classes.
 #
 
+class UserIdentificationDataType(GeneratedsSuper):
+    subclass = None
+    superclass = None
+    def __init__(self, ConsumerID=None, LoginName=None, EmailID=None, TempToken=None):
+        self.ConsumerID = ConsumerID
+        self.LoginName = LoginName
+        self.EmailID = EmailID
+        self.TempToken = TempToken
+    def factory(*args_, **kwargs_):
+        if UserIdentificationDataType.subclass:
+            return UserIdentificationDataType.subclass(*args_, **kwargs_)
+        else:
+            return UserIdentificationDataType(*args_, **kwargs_)
+    factory = staticmethod(factory)
+    def get_ConsumerID(self): return self.ConsumerID
+    def set_ConsumerID(self, ConsumerID): self.ConsumerID = ConsumerID
+    def validate_ConsumerIDType(self, value):
+        # Validate type ConsumerIDType, a restriction on xs:long.
+        pass
+    def get_LoginName(self): return self.LoginName
+    def set_LoginName(self, LoginName): self.LoginName = LoginName
+    def validate_Name(self, value):
+        # Validate type Name, a restriction on xs:string.
+        pass
+    def get_EmailID(self): return self.EmailID
+    def set_EmailID(self, EmailID): self.EmailID = EmailID
+    def validate_EmailId(self, value):
+        # Validate type EmailId, a restriction on xs:string.
+        pass
+    def get_TempToken(self): return self.TempToken
+    def set_TempToken(self, TempToken): self.TempToken = TempToken
+    def validate_Token(self, value):
+        # Validate type Token, a restriction on xs:string.
+        pass
+    def export(self, outfile, level, namespace_='', name_='UserIdentificationDataType', namespacedef_=''):
+        showIndent(outfile, level)
+        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        already_processed = []
+        self.exportAttributes(outfile, level, already_processed, namespace_, name_='UserIdentificationDataType')
+        if self.hasContent_():
+            outfile.write('>\n')
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            showIndent(outfile, level)
+            outfile.write('</%s%s>\n' % (namespace_, name_))
+        else:
+            outfile.write('/>\n')
+    def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='UserIdentificationDataType'):
+        pass
+    def exportChildren(self, outfile, level, namespace_='', name_='UserIdentificationDataType', fromsubclass_=False):
+        if self.ConsumerID is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sConsumerID>%s</%sConsumerID>\n' % (namespace_, self.gds_format_integer(self.ConsumerID, input_name='ConsumerID'), namespace_))
+        if self.LoginName is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sLoginName>%s</%sLoginName>\n' % (namespace_, self.gds_format_string(quote_xml(self.LoginName).encode(ExternalEncoding), input_name='LoginName'), namespace_))
+        if self.EmailID is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sEmailID>%s</%sEmailID>\n' % (namespace_, self.gds_format_string(quote_xml(self.EmailID).encode(ExternalEncoding), input_name='EmailID'), namespace_))
+        if self.TempToken is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sTempToken>%s</%sTempToken>\n' % (namespace_, self.gds_format_string(quote_xml(self.TempToken).encode(ExternalEncoding), input_name='TempToken'), namespace_))
+    def hasContent_(self):
+        if (
+            self.ConsumerID is not None or
+            self.LoginName is not None or
+            self.EmailID is not None or
+            self.TempToken is not None
+            ):
+            return True
+        else:
+            return False
+    def exportLiteral(self, outfile, level, name_='UserIdentificationDataType'):
+        level += 1
+        self.exportLiteralAttributes(outfile, level, [], name_)
+        if self.hasContent_():
+            self.exportLiteralChildren(outfile, level, name_)
+    def exportLiteralAttributes(self, outfile, level, already_processed, name_):
+        pass
+    def exportLiteralChildren(self, outfile, level, name_):
+        if self.ConsumerID is not None:
+            showIndent(outfile, level)
+            outfile.write('ConsumerID=%d,\n' % self.ConsumerID)
+        if self.LoginName is not None:
+            showIndent(outfile, level)
+            outfile.write('LoginName=%s,\n' % quote_python(self.LoginName).encode(ExternalEncoding))
+        if self.EmailID is not None:
+            showIndent(outfile, level)
+            outfile.write('EmailID=%s,\n' % quote_python(self.EmailID).encode(ExternalEncoding))
+        if self.TempToken is not None:
+            showIndent(outfile, level)
+            outfile.write('TempToken=%s,\n' % quote_python(self.TempToken).encode(ExternalEncoding))
+    def build(self, node):
+        self.buildAttributes(node, node.attrib, [])
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, node, nodeName_)
+    def buildAttributes(self, node, attrs, already_processed):
+        pass
+    def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
+        if nodeName_ == 'ConsumerID':
+            sval_ = child_.text
+            try:
+                ival_ = int(sval_)
+            except (TypeError, ValueError), exp:
+                raise_parse_error(child_, 'requires integer: %s' % exp)
+            ival_ = self.gds_validate_integer(ival_, node, 'ConsumerID')
+            self.ConsumerID = ival_
+            self.validate_ConsumerIDType(self.ConsumerID)    # validate type ConsumerIDType
+        elif nodeName_ == 'LoginName':
+            LoginName_ = child_.text
+            LoginName_ = self.gds_validate_string(LoginName_, node, 'LoginName')
+            self.LoginName = LoginName_
+            self.validate_Name(self.LoginName)    # validate type Name
+        elif nodeName_ == 'EmailID':
+            EmailID_ = child_.text
+            EmailID_ = self.gds_validate_string(EmailID_, node, 'EmailID')
+            self.EmailID = EmailID_
+            self.validate_EmailId(self.EmailID)    # validate type EmailId
+        elif nodeName_ == 'TempToken':
+            TempToken_ = child_.text
+            TempToken_ = self.gds_validate_string(TempToken_, node, 'TempToken')
+            self.TempToken = TempToken_
+            self.validate_Token(self.TempToken)    # validate type Token
+# end class UserIdentificationDataType
+
+
 class ConsumerIDAndApplicationsType(GeneratedsSuper):
     subclass = None
     superclass = None
@@ -3287,132 +3413,6 @@ class HubLifeStylesType(GeneratedsSuper):
 # end class HubLifeStylesType
 
 
-class UserIdentificationDataType(GeneratedsSuper):
-    subclass = None
-    superclass = None
-    def __init__(self, ConsumerID=None, LoginName=None, EmailID=None, TempToken=None):
-        self.ConsumerID = ConsumerID
-        self.LoginName = LoginName
-        self.EmailID = EmailID
-        self.TempToken = TempToken
-    def factory(*args_, **kwargs_):
-        if UserIdentificationDataType.subclass:
-            return UserIdentificationDataType.subclass(*args_, **kwargs_)
-        else:
-            return UserIdentificationDataType(*args_, **kwargs_)
-    factory = staticmethod(factory)
-    def get_ConsumerID(self): return self.ConsumerID
-    def set_ConsumerID(self, ConsumerID): self.ConsumerID = ConsumerID
-    def validate_ConsumerIDType(self, value):
-        # Validate type ConsumerIDType, a restriction on xs:long.
-        pass
-    def get_LoginName(self): return self.LoginName
-    def set_LoginName(self, LoginName): self.LoginName = LoginName
-    def validate_Name(self, value):
-        # Validate type Name, a restriction on xs:string.
-        pass
-    def get_EmailID(self): return self.EmailID
-    def set_EmailID(self, EmailID): self.EmailID = EmailID
-    def validate_EmailId(self, value):
-        # Validate type EmailId, a restriction on xs:string.
-        pass
-    def get_TempToken(self): return self.TempToken
-    def set_TempToken(self, TempToken): self.TempToken = TempToken
-    def validate_Token(self, value):
-        # Validate type Token, a restriction on xs:string.
-        pass
-    def export(self, outfile, level, namespace_='', name_='UserIdentificationDataType', namespacedef_=''):
-        showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
-        already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='UserIdentificationDataType')
-        if self.hasContent_():
-            outfile.write('>\n')
-            self.exportChildren(outfile, level + 1, namespace_, name_)
-            showIndent(outfile, level)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
-        else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='UserIdentificationDataType'):
-        pass
-    def exportChildren(self, outfile, level, namespace_='', name_='UserIdentificationDataType', fromsubclass_=False):
-        if self.ConsumerID is not None:
-            showIndent(outfile, level)
-            outfile.write('<%sConsumerID>%s</%sConsumerID>\n' % (namespace_, self.gds_format_integer(self.ConsumerID, input_name='ConsumerID'), namespace_))
-        if self.LoginName is not None:
-            showIndent(outfile, level)
-            outfile.write('<%sLoginName>%s</%sLoginName>\n' % (namespace_, self.gds_format_string(quote_xml(self.LoginName).encode(ExternalEncoding), input_name='LoginName'), namespace_))
-        if self.EmailID is not None:
-            showIndent(outfile, level)
-            outfile.write('<%sEmailID>%s</%sEmailID>\n' % (namespace_, self.gds_format_string(quote_xml(self.EmailID).encode(ExternalEncoding), input_name='EmailID'), namespace_))
-        if self.TempToken is not None:
-            showIndent(outfile, level)
-            outfile.write('<%sTempToken>%s</%sTempToken>\n' % (namespace_, self.gds_format_string(quote_xml(self.TempToken).encode(ExternalEncoding), input_name='TempToken'), namespace_))
-    def hasContent_(self):
-        if (
-            self.ConsumerID is not None or
-            self.LoginName is not None or
-            self.EmailID is not None or
-            self.TempToken is not None
-            ):
-            return True
-        else:
-            return False
-    def exportLiteral(self, outfile, level, name_='UserIdentificationDataType'):
-        level += 1
-        self.exportLiteralAttributes(outfile, level, [], name_)
-        if self.hasContent_():
-            self.exportLiteralChildren(outfile, level, name_)
-    def exportLiteralAttributes(self, outfile, level, already_processed, name_):
-        pass
-    def exportLiteralChildren(self, outfile, level, name_):
-        if self.ConsumerID is not None:
-            showIndent(outfile, level)
-            outfile.write('ConsumerID=%d,\n' % self.ConsumerID)
-        if self.LoginName is not None:
-            showIndent(outfile, level)
-            outfile.write('LoginName=%s,\n' % quote_python(self.LoginName).encode(ExternalEncoding))
-        if self.EmailID is not None:
-            showIndent(outfile, level)
-            outfile.write('EmailID=%s,\n' % quote_python(self.EmailID).encode(ExternalEncoding))
-        if self.TempToken is not None:
-            showIndent(outfile, level)
-            outfile.write('TempToken=%s,\n' % quote_python(self.TempToken).encode(ExternalEncoding))
-    def build(self, node):
-        self.buildAttributes(node, node.attrib, [])
-        for child in node:
-            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
-            self.buildChildren(child, node, nodeName_)
-    def buildAttributes(self, node, attrs, already_processed):
-        pass
-    def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
-        if nodeName_ == 'ConsumerID':
-            sval_ = child_.text
-            try:
-                ival_ = int(sval_)
-            except (TypeError, ValueError), exp:
-                raise_parse_error(child_, 'requires integer: %s' % exp)
-            ival_ = self.gds_validate_integer(ival_, node, 'ConsumerID')
-            self.ConsumerID = ival_
-            self.validate_ConsumerIDType(self.ConsumerID)    # validate type ConsumerIDType
-        elif nodeName_ == 'LoginName':
-            LoginName_ = child_.text
-            LoginName_ = self.gds_validate_string(LoginName_, node, 'LoginName')
-            self.LoginName = LoginName_
-            self.validate_Name(self.LoginName)    # validate type Name
-        elif nodeName_ == 'EmailID':
-            EmailID_ = child_.text
-            EmailID_ = self.gds_validate_string(EmailID_, node, 'EmailID')
-            self.EmailID = EmailID_
-            self.validate_EmailId(self.EmailID)    # validate type EmailId
-        elif nodeName_ == 'TempToken':
-            TempToken_ = child_.text
-            TempToken_ = self.gds_validate_string(TempToken_, node, 'TempToken')
-            self.TempToken = TempToken_
-            self.validate_Token(self.TempToken)    # validate type Token
-# end class UserIdentificationDataType
-
-
 class UnsubscribePreferencesType(GeneratedsSuper):
     subclass = None
     superclass = None
@@ -4367,6 +4367,7 @@ if __name__ == '__main__':
 
 __all__ = [
     "AnswerType",
+    "UserIdentificationDataType",
     "ConsumerIDAndApplicationType",
     "ConsumerIDAndApplicationsType",
     "EmailDetailsType",
@@ -4388,7 +4389,6 @@ __all__ = [
     "UserAccountType",
     "CommunicationChannelDetailsType",
     "ConsumerDetailsType",
-    "UserIdentificationDataType",
     "UnsubscribePreferenceType",
     "UnsubscribePreferencesType",
     "CountryType",
