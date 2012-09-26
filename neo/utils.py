@@ -101,6 +101,8 @@ class ConsumerWrapper(object):
     
     def _set_preference(self, answer, category_id, question_id, mod_flag):
         prefs = self._get_or_create_preferences()
+	if mod_flag == modify_flag['UPDATE']:
+	    mod_flag = modify_flag['MODIFY']  # preferences use the modify flag instead
         answer.ModifyFlag = mod_flag
         q_category = None
         has_question = False
