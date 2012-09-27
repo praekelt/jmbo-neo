@@ -206,5 +206,5 @@ def set_password(user, raw_password, old_password=None):
         pass
     user.raw_password = raw_password
     user.password = make_password(raw_password)
-
+# use on class prepared instead
 User.set_password = set_password

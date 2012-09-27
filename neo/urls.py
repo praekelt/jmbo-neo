@@ -18,14 +18,14 @@ urlpatterns = patterns('',
         },
         name='password_reset',
     ),
-    # Password reset with foundry form
+    # Password reset confirm with neo token generator
     url(
-        r'^password_reset_confirm/$', 
+        r'^reset/(?P<uidb36>[0-9A-Za-z]{1,13})-(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', 
         'django.contrib.auth.views.password_reset_confirm', 
         {
             'token_generator': neo_token_generator,
         },
-        name='password_reset',
+        name='password_reset_confirm',
     ),
     url(
         r'^password_change/$',

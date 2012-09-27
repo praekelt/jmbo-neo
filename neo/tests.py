@@ -112,6 +112,7 @@ class NeoTestCase(TestCase):
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(self.login_basic(member))
 
+    # test needs to be improved
     def test_logout(self):
         member = self.create_member()
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
@@ -120,28 +121,30 @@ class NeoTestCase(TestCase):
 
     def test_password_change(self):
         member = self.create_member()
-        self.login_basic(member)
         response = self.client.post(reverse('password_change'), {'old_password': 'password',
             'new_password1': 'new_password', 'new_password2': 'new_password'})
-        self.assertEqual(response.status_code, 302)
+        self.client.logout()
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+        self.assertTrue(self.client.login(username=member.username, password='new_password'))
 
-    def test_forgot_password_token(self):
+    def test_generate_forgot_password_token(self):
         member = self.create_member()
         token_generator = NeoTokenGenerator()
         self.assertTrue(token_generator.make_token(member))
 
-    def test_reset_password(self):
+    def test_password_reset(self):
         member = self.create_member()
         self.login_basic(member)
-        response = self.client.post(reverse('password_reset'), {'mobile_number': '+27733416692'})
+        response = self.client.post(reverse('password_reset'), {'mobile_number': member.mobile_number})
         self.assertEqual(response.status_code, 200)
 
-    def test_reset_password_confirm(self):
+    def test_password_reset_confirm(self):
         member = self.create_member()
         token_generator = NeoTokenGenerator()
+        # get rid of this simplification and actually use the reverse
         token = token_generator.make_token(member)
-        if token_generator.check_token(member, token):
-            member.set_password('new_password')
-            member.save()
-        else:
-            self.assertTrue(False)
+        self.assertTrue(token_generator.check_token(member, token))
+        member.set_password('new_password')
+        member.save()
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+        self.assertTrue(self.client.login(username=member.username, password='new_password'))
