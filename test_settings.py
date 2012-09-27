@@ -17,6 +17,41 @@ CACHES = {
     }
 }
 
+MIDDLEWARE_CLASSES = (
+    'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'foundry.middleware.AgeGateway',                            
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'likes.middleware.SecretBallotUserIpUseragentMiddleware',
+    'foundry.middleware.PaginationMiddleware',
+    'foundry.middleware.VerboseRequestMeta',                    
+    'django.middleware.transaction.TransactionMiddleware',
+)
+
+# A tuple of callables that are used to populate the context in RequestContext. 
+# These callables take a request object as their argument and return a 
+# dictionary of items to be merged into the context.
+TEMPLATE_CONTEXT_PROCESSORS = (
+    "django.contrib.auth.context_processors.auth",
+    "django.contrib.messages.context_processors.messages",
+    "django.core.context_processors.debug",
+    "django.core.context_processors.i18n",
+    "django.core.context_processors.media",
+    "django.core.context_processors.static",
+    "django.core.context_processors.request",
+    'preferences.context_processors.preferences_cp',
+    'foundry.context_processors.foundry',
+)
+
+# AppDirectoriesTypeLoader must be after filesystem loader
+TEMPLATE_LOADERS = (
+    'django.template.loaders.filesystem.Loader',
+    'foundry.loaders.AppDirectoriesTypeLoader',
+    'django.template.loaders.app_directories.Loader',
+)
+
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.comments',
