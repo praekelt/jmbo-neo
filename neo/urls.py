@@ -40,4 +40,5 @@ urlpatterns = patterns('',
         'django.contrib.auth.views.password_change_done',
         name='password_change_done'
     ),
+    (r'^auth/', include('django.contrib.auth.urls')),
 )

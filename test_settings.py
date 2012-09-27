@@ -22,11 +22,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'foundry.middleware.AgeGateway',                            
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'likes.middleware.SecretBallotUserIpUseragentMiddleware',
-    'foundry.middleware.PaginationMiddleware',
-    'foundry.middleware.VerboseRequestMeta',                    
+    'django.contrib.messages.middleware.MessageMiddleware',     
     'django.middleware.transaction.TransactionMiddleware',
 )
 
@@ -44,6 +40,10 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     'preferences.context_processors.preferences_cp',
     'foundry.context_processors.foundry',
 )
+
+FOUNDRY = {
+    'layers': ('basic', )
+}
 
 # AppDirectoriesTypeLoader must be after filesystem loader
 TEMPLATE_LOADERS = (
