@@ -12,7 +12,7 @@ from django.contrib.sessions.models import Session
 
 from foundry.models import Member, Country
 
-from neo.models import NeoProfile, NEO_ATTR
+from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
 from neo.utils import NeoTokenGenerator
 
 class NeoTestCase(TestCase):
@@ -64,7 +64,7 @@ class NeoTestCase(TestCase):
         cache.clear();
         # retrieve the member from db + Neo
         member2 = Member.objects.all()[0]
-        for key in NEO_ATTR:
+        for key in NEO_ATTR.union(ADDRESS_FIELDS):
             self.assertEqual(getattr(member1, key), getattr(member2, key))
     
     def test_update_member(self):
@@ -75,12 +75,15 @@ class NeoTestCase(TestCase):
             slug="south-africa",
             country_code="ZA",
         )
+        new_gender = 'M'
         # change the member attributes
         for key, val in self.member_attrs.iteritems():
             if key == 'dob':
                 new_val = new_dob
             elif key == 'country':
                 new_val = new_country
+            elif key == 'gender':
+                new_val = new_gender
             else:
                 new_val = "new_" + val
             setattr(member, key, new_val)
@@ -94,6 +97,8 @@ class NeoTestCase(TestCase):
                 new_val = new_dob
             elif key == 'country':
                 new_val = new_country
+            elif key == 'gender':
+                new_val = new_gender
             else:
                 new_val = "new_" + val
             self.assertEqual(getattr(member, key), new_val)
