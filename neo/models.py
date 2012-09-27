@@ -169,6 +169,19 @@ def create_consumer(sender, **kwargs):
     cache.set(cache_key, dict((k, getattr(member, k, None)) \
         for k in NEO_ATTR.union(ADDRESS_FIELDS)), 1200)
 
+@receiver(signals.post_save, sender=User)
+def update_user_password(sender, *args, **kwargs):
+    instance = kwargs['instance']
+    if not isinstance(instance, Member) and NeoProfile.objects.filter(user=instance).exists():
+	# check if password needs to be changed
+        raw_password = getattr(instance, 'raw_password', None)
+        if raw_password:
+            old_password = getattr(instance, 'old_password', None)
+            if old_password:
+                api.change_password(instance.username, raw_password, old_password=old_password)
+            else:
+                api.change_password(instance.username, raw_password, token=instance.forgot_password_token)
+	    delattr(instance, 'raw_password')
 
 @receiver(signals.post_init, sender=Member)
 def load_consumer(sender, *args, **kwargs):

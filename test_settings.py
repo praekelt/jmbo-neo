@@ -1,3 +1,5 @@
+DEBUG = True
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.spatialite',
@@ -67,6 +69,7 @@ INSTALLED_APPS = [
     'publisher',
     'foundry',
     'neo',
+    'compressor',
 ]
 #'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
 NEO = {

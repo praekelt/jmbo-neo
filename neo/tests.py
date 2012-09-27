@@ -125,9 +125,6 @@ class NeoTestCase(TestCase):
 	self.login_basic(member)
         response = self.client.post(reverse('password_change'), {'old_password': 'password',
             'new_password1': 'new_password', 'new_password2': 'new_password'})
-	self.assertTrue(hasattr(member, 'raw_password'))
-	self.assertTrue(hasattr(member, 'old_password'))
-	member.save()
 	relative_path = re.sub(r'https?://\w+', '', response['Location'])
 	self.assertEqual(relative_path, reverse('password_change_done'))
         self.client.logout()
@@ -156,3 +153,4 @@ class NeoTestCase(TestCase):
         member.save()
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
         self.assertTrue(self.client.login(username=member.username, password='new_password'))
+
