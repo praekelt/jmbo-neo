@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -195,7 +195,7 @@ class ConsumerWrapper(object):
     def dob(self):
         if self._consumer.ConsumerProfile is not None and \
             self._consumer.ConsumerProfile.DOB is not None:
-            return date.strptime(self._consumer.ConsumerProfile.DOB, "%Y-%m-%d")
+            return datetime.strptime(self._consumer.ConsumerProfile.DOB, "%Y-%m-%d").date()
         return None
     
     @property
