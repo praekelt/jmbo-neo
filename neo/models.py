@@ -85,7 +85,7 @@ def create_consumer(sender, **kwargs):
     del member.cleared_fields
 
     cache_key = 'neo_consumer_%s' % member.pk
-    if kwargs['created'] or not NeoProfile.objects.filter(user=member).exists():
+    if kwargs['created']:
         # create consumer
         wrapper = ConsumerWrapper()
         for a in NEO_ATTR:
@@ -191,26 +191,22 @@ def load_consumer(sender, *args, **kwargs):
     instance = kwargs['instance']
     # if the object being instantiated has a pk, i.e. has been saved to the db
     if instance.id:
-        try:
-            pk = instance.id
-            cache_key = 'neo_consumer_%s' % pk
-            member = cache.get(cache_key, None)
-            if member is None:
-                consumer_id = NeoProfile.objects.get(user=pk).consumer_id
-                # retrieve consumer from Neo
-                consumer = api.get_consumer(consumer_id)
-                wrapper = ConsumerWrapper(consumer=consumer)
-                member=dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
-                member.update(wrapper.address) # special case
-                # cache the neo member dictionary
-                cache.set(cache_key, member, 1200)
+        pk = instance.id
+        cache_key = 'neo_consumer_%s' % pk
+        member = cache.get(cache_key, None)
+        if member is None:
+            consumer_id = NeoProfile.objects.get(user=pk).consumer_id
+            # retrieve consumer from Neo
+            consumer = api.get_consumer(consumer_id)
+            wrapper = ConsumerWrapper(consumer=consumer)
+            member=dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
+            member.update(wrapper.address) # special case
+            # cache the neo member dictionary
+            cache.set(cache_key, member, 1200)
 
-            # update instance with Neo attributes
-            for key, val in member.iteritems():
-                setattr(instance, key, val)
-        # for the sake of members that were created before Neo integration
-        except NeoProfile.DoesNotExist:
-            instance.save()
+        # update instance with Neo attributes
+        for key, val in member.iteritems():
+            setattr(instance, key, val)
 
 '''
 Patch the user class so that the clear text
