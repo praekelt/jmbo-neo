@@ -1,14 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_out
-from django.contrib.contenttype.models import ContentType
-from django.db.models import signals
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import signals, Q
 from django.dispatch import receiver
 from django.core.cache import cache
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
 
-from jmbo import ModelBase
+from jmbo.models import ModelBase
 
 from foundry.models import Member, Country
 from foundry.forms import PasswordResetForm
@@ -65,7 +65,7 @@ def add_promo_code_to_consumer(sender, **kwargs):
 
 
 if COMPETITION_IS_ACTIVE:
-    post_save.connect(add_promo_code_to_consumer, sender=CompetitionEntry)
+    signals.post_save.connect(add_promo_code_to_consumer, sender=CompetitionEntry)
 
 
 '''

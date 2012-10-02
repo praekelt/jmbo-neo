@@ -166,14 +166,15 @@ class NeoTestCase(TestCase):
             start_date=timezone.now().date(),
             end_date=(timezone.now() + timedelta(days=1)).date(),
         )
-        competition.sites.add(Site.objects.all().values_list('id', flat=True))
+	site_ids = list(Site.objects.all().values_list('id', flat=True))
+        competition.sites.add(*site_ids)
         competition.publish()
         neo_promo = NeoPromo.objects.create(
             promo_code="competition_promo_code",
             promo_object=competition,
         )
         self.login_basic(member)
-        self.client.post(reverse('competition-detail', urlconf='competition.urls', kwargs={'slug': competition.slug}))
+        self.client.post(reverse('competition-detail', kwargs={'slug': competition.slug}), {'accept_terms': True})
         consumer = api.get_consumer(NeoProfile.objects.get(user=member).consumer_id)
         from StringIO import StringIO
         stream = StringIO()

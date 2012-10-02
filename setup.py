@@ -11,17 +11,17 @@ setup(
     url='http://github.com/praekelt/jmbo-neo',
     packages = find_packages(),
     dependency_links = [
-        'http://github.com/praekelt/jmbo-foundry/tarball/feature/add_address_gender_to_member/2.6.praekelt#egg=jmbo-foundry-2.6.praekelt',
+        'http://github.com/praekelt/jmbo-foundry/tarball/develop/2.6.praekelt#egg=jmbo-foundry-2.6.praekelt',
         'http://github.com/praekelt/jmbo-competition/tarball/feature/competition_entry_form/2.6.praekelt#egg=jmbo-competition-2.6.praekelt',
     ],
     install_requires = [
-        'jmbo-foundry',
+	'jmbo-foundry',
         'django-ckeditor',
         'requests',
         'lxml',
     ],
     tests_require=[
-        'django-setuptest',
+	'django-setuptest',
         'python-memcached',
     ],
     test_suite="setuptest.setuptest.SetupTestSuite",
