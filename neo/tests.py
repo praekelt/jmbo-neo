@@ -15,6 +15,7 @@ from foundry.models import Member, Country
 
 from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
 from neo.utils import NeoTokenGenerator
+from neo import api
 
 class NeoTestCase(TestCase):
 
@@ -154,3 +155,7 @@ class NeoTestCase(TestCase):
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
         self.assertTrue(self.client.login(username=member.username, password='new_password'))
 
+   def test_add_promocode(self):
+       member = self.create_member()
+       consumer_id = NeoProfile.objects.get(user=member).consumer_id
+       api.add_promo_code(consumer_id, 'some_promo_code')
