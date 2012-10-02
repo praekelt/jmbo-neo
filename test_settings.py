@@ -55,6 +55,7 @@ TEMPLATE_LOADERS = (
 )
 
 INSTALLED_APPS = [
+    'atlas',
     'django.contrib.auth',
     'django.contrib.comments',
     'django.contrib.contenttypes',
@@ -86,4 +87,4 @@ STATIC_URL = 'static/'
 
 SITE_ID = 1
 
-ROOT_URLCONF = 'neo.urls'
+ROOT_URLCONF = 'neo.test_urls'

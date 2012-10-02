@@ -174,10 +174,10 @@ class NeoTestCase(TestCase):
             promo_object=competition,
         )
         self.login_basic(member)
-        self.client.post(reverse('competition-detail', kwargs={'slug': competition.slug}), {'accept_terms': True})
-        consumer = api.get_consumer(NeoProfile.objects.get(user=member).consumer_id)
-        from StringIO import StringIO
-        stream = StringIO()
-        consumer.export(stream)
-        print stream.getvalue()
+	try:
+            self.client.post(reverse('competition-detail', kwargs={'slug': competition.slug}), {'accept_terms': True})
+        except:
+	    pass
+	consumer = api.get_consumer(NeoProfile.objects.get(user=member).consumer_id)
+        self.assertEqual(neo_promo.promo_code, consumer.ConsumerProfile.PromoCode)
         
