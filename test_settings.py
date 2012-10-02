@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'category',
     'preferences',
     'jmbo',
+    'competition',
     'photologue',
     'secretballot',
     'publisher',

@@ -10,10 +10,13 @@ from django.core.cache import cache
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.contrib.sessions.models import Session
+from django.contrib.sites.models import Site
 
 from foundry.models import Member, Country
+from competition.models import Competition
 
-from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
+from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS, \
+    NeoPromo
 from neo.utils import NeoTokenGenerator
 from neo import api
 
@@ -155,7 +158,25 @@ class NeoTestCase(TestCase):
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
         self.assertTrue(self.client.login(username=member.username, password='new_password'))
 
-    def test_add_promocode(self):
+    def test_add_competition_promocode(self):
         member = self.create_member()
-        consumer_id = NeoProfile.objects.get(user=member).consumer_id
-        api.add_promo_code(consumer_id, 'some_promo_code')
+        competition = Competition.objects.create(
+            title="Competition",
+            content="Content",
+            start_date=timezone.now().date(),
+            end_date=(timezone.now() + timedelta(days=1)).date(),
+        )
+        competition.sites.add(Site.objects.all().values_list('id', flat=True))
+        competition.publish()
+        neo_promo = NeoPromo.objects.create(
+            promo_code="competition_promo_code",
+            promo_object=competition,
+        )
+        self.login_basic(member)
+        self.client.post(reverse('competition-detail', urlconf='competition.urls', kwargs={'slug': competition.slug}))
+        consumer = api.get_consumer(NeoProfile.objects.get(user=member).consumer_id)
+        from StringIO import StringIO
+        stream = StringIO()
+        consumer.export(stream)
+        print stream.getvalue()
+        
