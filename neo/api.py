@@ -93,8 +93,11 @@ def create_consumer(consumer):
 # activates the newly created consumer account, optionally using a validation uri
 def complete_registration(consumer_id, uri=None):
     if not uri:
+	new_r_kwargs = copy.deepcopy(r_kwargs)
+        del new_r_kwargs['headers']['content-type']
+        new_r_kwargs['headers']['content-length'] = '0'
         response = requests.post("%s/consumers/%s/registration" % (BASE_URL, consumer_id), \
-            **r_kwargs)
+            **new_r_kwargs)
     else:
         response = requests.get(uri)
     if response.status_code != 200:
