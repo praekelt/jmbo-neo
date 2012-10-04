@@ -35,7 +35,7 @@ A model that associates a Neo promo code with some interactive content.
 If a user interacts with this object, the promo code is added to their consumer profile
 on Neo. Only supports competitions for now.
 '''
-class NeoPromo(models.Model):
+"""class NeoPromo(models.Model):
     promo_code = models.CharField(
         max_length=50,
     )
@@ -56,8 +56,8 @@ def add_promo_code_to_consumer(sender, **kwargs):
         try:
             promo_code = NeoPromo.objects.get(promo_object=promo_object).promo_code
             try:
-                consumer_id = NeoProfile.objects.get(user=user).consumer_id
-                api.add_promo_code(consumer_id, promo_code)
+                neo_profile = NeoProfile.objects.get(user=user)
+                api.add_promo_code(neo_profile, promo_code)
             except NeoProfile.DoesNotExist:
                 pass
         except NeoPromo.DoesNotExist:
@@ -65,7 +65,7 @@ def add_promo_code_to_consumer(sender, **kwargs):
 
 
 if COMPETITION_IS_ACTIVE:
-    signals.post_save.connect(add_promo_code_to_consumer, sender=CompetitionEntry)
+    signals.post_save.connect(add_promo_code_to_consumer, sender=CompetitionEntry)"""
 
 
 '''
@@ -91,7 +91,7 @@ USE_AUTH = settings.NEO.get('USE_AUTH', False)
 def notify_logout(sender, **kwargs):
     try:
         neo_profile = NeoProfile.objects.get(user=kwargs['user'])
-        api.logout(neo_profile.consumer_id)
+        api.logout(neo_profile)
     except NeoProfile.DoesNotExist:
         pass # figure out something to do here
 
@@ -153,7 +153,7 @@ def create_consumer(sender, **kwargs):
 
         consumer_id, uri = api.create_consumer(wrapper.consumer)
         neo_profile = NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
-        api.complete_registration(consumer_id)  # activates the account
+        api.complete_registration(neo_profile)  # activates the account
 
     else:
         # update changed attributes
@@ -201,10 +201,10 @@ def create_consumer(sender, **kwargs):
                     mod_flag=modify_flag['UPDATE'])
 
         if not wrapper.is_empty:
-	    consumer_id = NeoProfile.objects.get(user=member).consumer_id
+	    neo_profile = NeoProfile.objects.get(user=member)
             if not wrapper.profile_is_empty:
-                wrapper.set_ids_for_profile(api.get_consumer_profile(consumer_id))
-            api.update_consumer(consumer_id, wrapper.consumer)
+                wrapper.set_ids_for_profile(api.get_consumer_profile(neo_profile))
+            api.update_consumer(neo_profile, wrapper.consumer)
         
         # check if password needs to be changed
         raw_password = getattr(member, 'raw_password', None)
@@ -243,9 +243,9 @@ def load_consumer(sender, *args, **kwargs):
         cache_key = 'neo_consumer_%s' % pk
         member = cache.get(cache_key, None)
         if member is None:
-            consumer_id = NeoProfile.objects.get(user=pk).consumer_id
+            neo_profile = NeoProfile.objects.get(user=pk)
             # retrieve consumer from Neo
-            consumer = api.get_consumer(consumer_id)
+            consumer = api.get_consumer(neo_profile)
             wrapper = ConsumerWrapper(consumer=consumer)
             member=dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
             member.update(wrapper.address) # special case
