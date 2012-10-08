@@ -20,6 +20,7 @@ requests.defaults.safe_mode = True
 # use basic http authentication
 HEADERS = {'content-type': 'application/xml'}
 if CONFIG.get('USE_MCAL', False):
+    HEADERS['Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'], CONFIG['PROMO_CODE'])))
     HEADERS['Proxy-Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'])))
 # keyword args used in all requests
 r_kwargs = {
@@ -32,15 +33,6 @@ class NeoError(Exception):
     pass
 
 
-def _get_consumer_request_kwargs(neo_profile):
-    user = neo_profile.user
-    if CONFIG.get('USE_MCAL', False):
-        kw = copy.deepcopy(r_kwargs)
-        kw['headers']['Authorization'] = 'Basic %s' % base64.b64encode(':'.join((user.username, user.password, CONFIG['PROMO_CODE'])))
-        return kw
-    return r_kwargs
-    
-    
 # authenticates using either username/password or a remember me token
 def authenticate(username=None, password=None, token=None, promo_code=None, acq_src=None):
     params = {'promocode': promo_code if promo_code else CONFIG['PROMO_CODE']}
@@ -62,20 +54,20 @@ def authenticate(username=None, password=None, token=None, promo_code=None, acq_
 
 
 # logs the consumer out on Neo server
-def logout(neo_profile, promo_code=None, acq_src=None):
+def logout(consumer_id, promo_code=None, acq_src=None):
     params = {'promocode': promo_code if promo_code else CONFIG['PROMO_CODE']}
     if acq_src:
         params['acquisitionsource'] = acq_src
-    response = requests.put("%s/consumers/%s/useraccount/notifylogout" % (BASE_URL, neo_profile.consumer_id),
-        params=params, **(_get_consumer_request_kwargs(neo_profile)))
+    response = requests.put("%s/consumers/%s/useraccount/notifylogout" % (BASE_URL, consumer_id),
+        params=params, **r_kwargs)
     if response.status_code != 200:
         raise NeoError("In logout: %s %s" % (response.status_code, response.content))
 
 
 # stores a remember me token on Neo server
-def remember_me(neo_profile, token):
-    response = requests.put("%s/consumers/%s/useraccount" % (BASE_URL, neo_profile.consumer_id),
-        params={'authtoken': token}, **(_get_consumer_request_kwargs(neo_profile)))
+def remember_me(consumer_id, token):
+    response = requests.put("%s/consumers/%s/useraccount" % (BASE_URL, consumer_id),
+        params={'authtoken': token}, **r_kwargs)
     if response.status_code != 200:
         raise NeoError("In remember_me: %s %s" % (response.status_code, response.content))
 
@@ -99,12 +91,12 @@ def create_consumer(consumer):
 
 
 # activates the newly created consumer account, optionally using a validation uri
-def complete_registration(neo_profile, uri=None):
+def complete_registration(consumer_id, uri=None):
     if not uri:
-	new_r_kwargs = _get_consumer_request_kwargs(neo_profile)
+	new_r_kwargs = copy.deepcopy(r_kwargs)
         del new_r_kwargs['headers']['content-type']
         new_r_kwargs['headers']['content-length'] = '0'
-        response = requests.post("%s/consumers/%s/registration" % (BASE_URL, neo_profile.consumer_id), \
+        response = requests.post("%s/consumers/%s/registration" % (BASE_URL, consumer_id), \
             **new_r_kwargs)
     else:
         response = requests.get(uri)
@@ -129,7 +121,7 @@ def get_consumers(email_id, dob):
 
 
 # links a consumer account from another app with this app
-def link_consumer(neo_profile, username, password, promo_code=None, acq_src=None):
+def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None):
     params = {
         'loginname': username,
         'password': password,
@@ -137,8 +129,8 @@ def link_consumer(neo_profile, username, password, promo_code=None, acq_src=None
     }
     if acq_src:
         params['acquisitionsource'] = acq_src
-    response = requests.put("%s/consumers/%s/registration/" % (BASE_URL, neo_profile.consumer_id), \
-        params=params, **(_get_consumer_request_kwargs(neo_profile)))
+    response = requests.put("%s/consumers/%s/registration/" % (BASE_URL, consumer_id), \
+        params=params, **r_kwargs)
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -149,9 +141,9 @@ def link_consumer(neo_profile, username, password, promo_code=None, acq_src=None
 
 
 # get a consumer object containing all the consumer data
-def get_consumer(neo_profile):
-    response = requests.get("%s/consumers/%s/all" % (BASE_URL, neo_profile.consumer_id), \
-        **(_get_consumer_request_kwargs(neo_profile)))
+def get_consumer(consumer_id):
+    response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id), \
+        **r_kwargs)
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -162,9 +154,9 @@ def get_consumer(neo_profile):
 
 
 # get a consumer's profile
-def get_consumer_profile(neo_profile):
-    response = requests.get("%s/consumers/%s/profile" % (BASE_URL, neo_profile.consumer_id), \
-        **(_get_consumer_request_kwargs(neo_profile)))
+def get_consumer_profile(consumer_id):
+    response = requests.get("%s/consumers/%s/profile" % (BASE_URL, consumer_id), \
+        **r_kwargs)
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -176,11 +168,11 @@ def get_consumer_profile(neo_profile):
 
 # get a consumer's preferences
 # specify category_id to get preferences for a category, otherwise all preferences are returned
-def get_consumer_preferences(neo_profile, category_id=None):
-    uri = "%s/consumers/%s/preferences" % (BASE_URL, neo_profile.consumer_id)
+def get_consumer_preferences(consumer_id, category_id=None):
+    uri = "%s/consumers/%s/preferences" % (BASE_URL, consumer_id)
     if category_id:
         uri += "/category/%s" % category_id
-    response = requests.get(uri, **(_get_consumer_request_kwargs(neo_profile)))
+    response = requests.get(uri, **r_kwargs)
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -191,12 +183,12 @@ def get_consumer_preferences(neo_profile, category_id=None):
 
 
 # update a consumer's data on the Neo server
-def update_consumer(neo_profile, consumer):
+def update_consumer(consumer_id, consumer):
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
-    response = requests.put("%s/consumers/%s" % (BASE_URL, neo_profile.consumer_id),
-        data=data_stream.getvalue(), **(_get_consumer_request_kwargs(neo_profile)))
+    response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id),
+        data=data_stream.getvalue(), **r_kwargs)
     data_stream.close()
     if response.status_code != 200:
         raise NeoError("In update_consumer: %s %s" % (response.status_code, response.content))
@@ -204,17 +196,17 @@ def update_consumer(neo_profile, consumer):
 
 # create consumer preferences
 # specify category_id to update preferences for a category, otherwise all preferences are updated
-def update_consumer_preferences(neo_profile, preferences, category_id=None, create=False):
+def update_consumer_preferences(consumer_id, preferences, category_id=None, create=False):
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     preferences.export(data_stream, 0)
-    uri = "%s/consumers/%s/preferences" % (BASE_URL, neo_profile.consumer_id)
+    uri = "%s/consumers/%s/preferences" % (BASE_URL, consumer_id)
     if category_id:
         uri += "/category/%s" % category_id
     if create:
-        response = requests.post(uri, data=data_stream.getvalue(), **(_get_consumer_request_kwargs(neo_profile)))
+        response = requests.post(uri, data=data_stream.getvalue(), **r_kwargs)
     else:
-        response = requests.put(uri, data=data_stream.getvalue(), **(_get_consumer_request_kwargs(neo_profile)))
+        response = requests.put(uri, data=data_stream.getvalue(), **r_kwargs)
     data_stream.close()
     if response.status_code != 200:
         raise NeoError("In update_consumer_preferences: %s %s" % (response.status_code, response.content))
@@ -268,24 +260,24 @@ def change_password(username, new_password, old_password=None, token=None):
 
 # unsubscribe from some brand or communication channel
 # the user must be logged in
-def unsubscribe(neo_profile, unsubscribe_obj):
+def unsubscribe(consumer_id, unsubscribe_obj):
     data_stream = StringIO()
     # write the unsubscribe data in xml to a string stream
     unsubscribe_obj.export(data_stream, 0)
-    response = requests.put("%s/consumers/%s/preferences/unsubscribe" % (BASE_URL, neo_profile.consumer_id),
-        data=data_stream.getvalue(), **(_get_consumer_request_kwargs(neo_profile)))
+    response = requests.put("%s/consumers/%s/preferences/unsubscribe" % (BASE_URL, consumer_id),
+        data=data_stream.getvalue(), **r_kwargs)
     data_stream.close()
     if response.status_code != 200:
         raise NeoError("In unsubscribe: %s %s" % (response.status_code, response.content))
 
 
 # add a promo code to a consumer (from master promo code list)
-def add_promo_code(neo_profile, promo_code, acq_src=None):
+def add_promo_code(consumer_id, promo_code, acq_src=None):
     params = {'promocode': promo_code}
     if acq_src:
         params['acquisitionsource'] = acq_src
-    response = requests.put("%s/consumers/%s" % (BASE_URL, neo_profile.consumer_id), \
-        params=params, **(_get_consumer_request_kwargs(neo_profile)))
+    response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id), \
+        params=params, **r_kwargs)
     if response.status_code != 200:
         raise NeoError("In add_promo_code: %s %s" % (response.status_code, response.content))
 

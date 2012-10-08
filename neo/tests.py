@@ -178,6 +178,6 @@ class NeoTestCase(TestCase):
             self.client.post(reverse('competition-detail', kwargs={'slug': competition.slug}), {'accept_terms': True})
         except:
 	    pass
-	consumer = api.get_consumer(NeoProfile.objects.get(user=member))
+	consumer = api.get_consumer(NeoProfile.objects.get(user=member).consumer_id)
         self.assertEqual(neo_promo.promo_code, consumer.ConsumerProfile.PromoCode)
         
