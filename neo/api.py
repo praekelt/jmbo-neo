@@ -20,7 +20,6 @@ requests.defaults.safe_mode = True
 # use basic http authentication
 HEADERS = {'content-type': 'application/xml'}
 if CONFIG.get('USE_MCAL', False):
-    HEADERS['Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'], CONFIG['PROMO_CODE'])))
     HEADERS['Proxy-Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'])))
 # keyword args used in all requests
 r_kwargs = {
@@ -122,6 +121,8 @@ def get_consumers(email_id, dob):
 
 # links a consumer account from another app with this app
 def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None):
+    if CONFIG.get('USE_MCAL', False):
+        raise NotImplementedError("Consumer requests not supported via MCAL")
     params = {
         'loginname': username,
         'password': password,
@@ -142,6 +143,8 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
 
 # get a consumer object containing all the consumer data
 def get_consumer(consumer_id):
+    if CONFIG.get('USE_MCAL', False):
+        raise NotImplementedError("Consumer requests not supported via MCAL")
     response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id), \
         **r_kwargs)
     if response.status_code == 200:
@@ -155,6 +158,8 @@ def get_consumer(consumer_id):
 
 # get a consumer's profile
 def get_consumer_profile(consumer_id):
+    if CONFIG.get('USE_MCAL', False):
+        raise NotImplementedError("Consumer requests not supported via MCAL")
     response = requests.get("%s/consumers/%s/profile" % (BASE_URL, consumer_id), \
         **r_kwargs)
     if response.status_code == 200:
@@ -184,6 +189,8 @@ def get_consumer_preferences(consumer_id, category_id=None):
 
 # update a consumer's data on the Neo server
 def update_consumer(consumer_id, consumer):
+    if CONFIG.get('USE_MCAL', False):
+        raise NotImplementedError("Consumer requests not supported via MCAL")
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
@@ -273,6 +280,8 @@ def unsubscribe(consumer_id, unsubscribe_obj):
 
 # add a promo code to a consumer (from master promo code list)
 def add_promo_code(consumer_id, promo_code, acq_src=None):
+    if CONFIG.get('USE_MCAL', False):
+        raise NotImplementedError("Consumer requests not supported via MCAL")
     params = {'promocode': promo_code}
     if acq_src:
         params['acquisitionsource'] = acq_src
