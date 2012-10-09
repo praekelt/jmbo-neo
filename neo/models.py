@@ -96,7 +96,7 @@ def notify_logout(sender, **kwargs):
     except NeoProfile.DoesNotExist:
         pass # figure out something to do here
 if USE_AUTH:
-    user_logged_out.connection(notify_logout)
+    user_logged_out.connect(notify_logout)
 
 
 def stash_neo_fields(sender, **kwargs):
@@ -122,7 +122,7 @@ def stash_neo_fields(sender, **kwargs):
             setattr(member, key, type(cleared_fields[key])())
     member.cleared_fields = cleared_fields
 if not USE_MCAL:
-    signals.pre_save(stash_neo_fields, sender=Member)
+    signals.pre_save.connect(stash_neo_fields, sender=Member)
 
 
 @receiver(signals.post_save, sender=Member)
@@ -264,7 +264,7 @@ def load_consumer(sender, *args, **kwargs):
         for key, val in member.iteritems():
             setattr(instance, key, val)
 if not USE_MCAL:
-    signals.post_init(load_consumer, sender=Member)
+    signals.post_init.connect(load_consumer, sender=Member)
 
 
 '''

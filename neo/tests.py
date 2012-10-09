@@ -15,8 +15,7 @@ from django.contrib.sites.models import Site
 from foundry.models import Member, Country
 from competition.models import Competition
 
-from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS, \
-    NeoPromo
+from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
 from neo.utils import NeoTokenGenerator
 from neo import api
 
@@ -158,7 +157,7 @@ class NeoTestCase(TestCase):
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
         self.assertTrue(self.client.login(username=member.username, password='new_password'))
 
-    def test_add_competition_promocode(self):
+    '''def test_add_competition_promocode(self):
         member = self.create_member()
         competition = Competition.objects.create(
             title="Competition",
@@ -179,5 +178,5 @@ class NeoTestCase(TestCase):
         except:
 	    pass
 	consumer = api.get_consumer(NeoProfile.objects.get(user=member).consumer_id)
-        self.assertEqual(neo_promo.promo_code, consumer.ConsumerProfile.PromoCode)
+        self.assertEqual(neo_promo.promo_code, consumer.ConsumerProfile.PromoCode)'''
         
