@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import signals, Q
 from django.dispatch import receiver
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
 
@@ -99,9 +100,8 @@ if USE_AUTH:
     user_logged_out.connect(notify_logout)
 
 
-def stash_neo_fields(sender, **kwargs):
+def stash_neo_fields(member):
     cleared_fields = {}
-    member = kwargs['instance']
     '''
     Stash the neo fields that aren't required and clear
     them on the instance so that they aren't saved to db
@@ -120,127 +120,135 @@ def stash_neo_fields(sender, **kwargs):
             setattr(member, key, field.default)
         else:
             setattr(member, key, type(cleared_fields[key])())
-    member.cleared_fields = cleared_fields
-if not USE_MCAL:
-    signals.pre_save.connect(stash_neo_fields, sender=Member)
+    return cleared_fields
 
 
-@receiver(signals.post_save, sender=Member)
-def create_consumer(sender, **kwargs):
-    member = kwargs['instance']
-    if hasattr(member, 'cleared_fields'):
-        '''
-        Reassign the stashed neo fields and delete
-        the stash
-        '''
-        for key, val in member.cleared_fields.iteritems():
-            setattr(member, key, val)
-        del member.cleared_fields
+def create_consumer(member):
+    wrapper = ConsumerWrapper()
+    for a in NEO_ATTR:
+        getattr(wrapper, "set_%s" % a)(getattr(member, a))
+    wrapper.set_password(member.raw_password)
+    del member.raw_password
 
-    cache_key = 'neo_consumer_%s' % member.pk
-    if kwargs['created']:
-        # create consumer
+    # assign address
+    has_address = False
+    for k in ADDRESS_FIELDS:
+        if getattr(member, k, None):
+            has_address = True
+            break
+    if has_address:
+        wrapper.set_address(member.address, member.city,
+            member.province, member.zipcode, member.country)
+
+    consumer_id, uri = api.create_consumer(wrapper.consumer)
+    api.complete_registration(consumer_id)  # activates the account
+    return consumer_id
+ 
+
+def update_consumer(member):
+    consumer_id = NeoProfile.objects.get(user=member).consumer_id
+    if not USE_MCAL:
+        # update changed attributes
+        old_member = cache.get(cache_key, None)
         wrapper = ConsumerWrapper()
-        for a in NEO_ATTR:
-            getattr(wrapper, "set_%s" % a)(getattr(member, a))
-        wrapper.set_password(member.raw_password)
-        del member.raw_password
-
-        # assign address
-        has_address = False
-        for k in ADDRESS_FIELDS:
-            if getattr(member, k, None):
-                has_address = True
-                break
-        if has_address:
-            wrapper.set_address(member.address, member.city,
-                member.province, member.zipcode, member.country)
-
-        consumer_id, uri = api.create_consumer(wrapper.consumer)
-        neo_profile = NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
-        api.complete_registration(consumer_id)  # activates the account
-
-    else:
-        if not USE_MCAL:
-            # update changed attributes
-            old_member = cache.get(cache_key, None)
-            wrapper = ConsumerWrapper()
-            if old_member is not None:  # it should never be None
-                for k in NEO_ATTR:
-                    # check where cached version and current version of member differ
-                    current = getattr(member, k, None)
-                    old = old_member.get(k, None)
-                    if current != old:
-                        # update attribute on Neo
-                        if old is None:
-                            getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['INSERT'])
-                        elif current is None:
-                            getattr(wrapper, "set_%s" % k)(old, mod_flag=modify_flag['DELETE'])
-                        else:
-                            getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['UPDATE'])
-
-            # check if address needs to change
-            has_address = False
-            had_address = False
-            address_changed = False
-            for k in ADDRESS_FIELDS:
+        if old_member is not None:  # it should never be None
+            for k in NEO_ATTR:
+                # check where cached version and current version of member differ
                 current = getattr(member, k, None)
                 old = old_member.get(k, None)
-                if current:
-                    has_address = True
-                if old:
-                    had_address = True
                 if current != old:
-                    address_changed = True
-            # update address accordingly
-            if address_changed:
-                if not has_address:
-                    wrapper.set_address(old_member.address, old_member.city,
-                        old_member.province, old_member.zipcode, old_member.country,
-                        modify_flag['DELETE'])
-                elif not had_address:
-                    wrapper.set_address(member.address, member.city,
-                        member.province, member.zipcode, member.country)
-                else:
-                    wrapper.set_address(member.address, member.city,
-                        member.province, member.zipcode, member.country,
-                        mod_flag=modify_flag['UPDATE'])
+                    # update attribute on Neo
+                    if old is None:
+                        getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['INSERT'])
+                    elif current is None:
+                        getattr(wrapper, "set_%s" % k)(old, mod_flag=modify_flag['DELETE'])
+                    else:
+                        getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['UPDATE'])
 
-            if not wrapper.is_empty:
-	        consumer_id = NeoProfile.objects.get(user=member).consumer_id
-                if not wrapper.profile_is_empty:
-                    wrapper.set_ids_for_profile(api.get_consumer_profile(consumer_id))
-                api.update_consumer(consumer_id, wrapper.consumer)
-        
-        # check if password needs to be changed
-        raw_password = getattr(member, 'raw_password', None)
-        if raw_password:
-            old_password = getattr(member, 'old_password', None)
-            if old_password:
-                api.change_password(member.username, raw_password, old_password=old_password)
+        # check if address needs to change
+        has_address = False
+        had_address = False
+        address_changed = False
+        for k in ADDRESS_FIELDS:
+            current = getattr(member, k, None)
+            old = old_member.get(k, None)
+            if current:
+                has_address = True
+            if old:
+                had_address = True
+            if current != old:
+                address_changed = True
+        # update address accordingly
+        if address_changed:
+            if not has_address:
+                wrapper.set_address(old_member.address, old_member.city,
+                    old_member.province, old_member.zipcode, old_member.country,
+                    modify_flag['DELETE'])
+            elif not had_address:
+                wrapper.set_address(member.address, member.city,
+                    member.province, member.zipcode, member.country)
             else:
-                api.change_password(member.username, raw_password, token=member.forgot_password_token)
-            
+                wrapper.set_address(member.address, member.city,
+                    member.province, member.zipcode, member.country,
+                    mod_flag=modify_flag['UPDATE'])
 
+        if not wrapper.is_empty:
+            if not wrapper.profile_is_empty:
+                wrapper.set_ids_for_profile(api.get_consumer_profile(consumer_id))
+            api.update_consumer(consumer_id, wrapper.consumer)
+    
+    # check if password needs to be changed
+    raw_password = getattr(member, 'raw_password', None)
+    if raw_password:
+        old_password = getattr(member, 'old_password', None)
+        if old_password:
+            api.change_password(member.username, raw_password, old_password=old_password)
+        else:
+            api.change_password(member.username, raw_password, token=member.forgot_password_token)
+    return consumer_id
+
+
+def save_member(member, *args, **kwargs):
+    member.full_clean()
+    try:
+        if member.pk:
+            consumer_id = update_consumer(member)
+        else:
+            consumer_id = create_consumer(member)
+    except api.NeoError as e:
+        raise ValidationError(str(e))
+    
+    cleared_fields = None
     if not USE_MCAL:
-        # cache this member after it is saved (thus created/updated successfully)
+        # cache this member after it is created/updated successfully
         cache.set(cache_key, dict((k, getattr(member, k, None)) \
             for k in NEO_ATTR.union(ADDRESS_FIELDS)), 1200)
+        # stash fields and reassign them after save
+        cleared_fields = stash_neo_fields(member)
+    super(Member, member).save(*args, **kwargs)
+    NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
+    if cleared_fields:
+        for key, val in member.cleared_fields.iteritems():
+            setattr(member, key, val)
 
 
-@receiver(signals.post_save, sender=User)
-def update_user_password(sender, *args, **kwargs):
-    instance = kwargs['instance']
-    if not isinstance(instance, Member) and NeoProfile.objects.filter(user=instance).exists():
+def save_user(user, *args, **kwargs):
+    user.full_clean()
+    if not isinstance(user, Member) and NeoProfile.objects.filter(user=user).exists():
 	# check if password needs to be changed
-        raw_password = getattr(instance, 'raw_password', None)
+        raw_password = getattr(user, 'raw_password', None)
         if raw_password:
-            old_password = getattr(instance, 'old_password', None)
-            if old_password:
-                api.change_password(instance.username, raw_password, old_password=old_password)
-            else:
-                api.change_password(instance.username, raw_password, token=instance.forgot_password_token)
-	    delattr(instance, 'raw_password')
+            old_password = getattr(user, 'old_password', None)
+            try:
+                if old_password:
+                    api.change_password(user.username, raw_password, old_password=old_password)
+                else:
+                    api.change_password(user.username, raw_password, token=user.forgot_password_token)
+            except api.NeoError as e:
+                delattr(user, 'raw_password')
+                raise ValidationError(str(e))
+
+    super(User, user).save(*args, **kwargs)
 
 
 def load_consumer(sender, *args, **kwargs):
@@ -268,8 +276,7 @@ if not USE_MCAL:
 
 
 '''
-Patch the user class so that the clear text
-password is stored on the object, thus making
+Store the clear text password on a user, thus making
 it accessible by Neo.
 '''
 def set_password(user, raw_password, old_password=None):
@@ -281,5 +288,11 @@ def set_password(user, raw_password, old_password=None):
         pass
     user.raw_password = raw_password
     user.password = make_password(raw_password)
-# use on class prepared instead
+
+
+'''
+Patch User and Member
+'''
 User.set_password = set_password
+User.save = save_user
+Member.save = save_member

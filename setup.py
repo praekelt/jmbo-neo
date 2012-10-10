@@ -19,6 +19,7 @@ setup(
         'django-ckeditor',
         'requests',
         'lxml',
+        'django>=1.4',
     ],
     tests_require=[
 	'django-setuptest',
