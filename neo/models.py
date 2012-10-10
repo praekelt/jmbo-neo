@@ -106,7 +106,7 @@ def stash_neo_fields(member):
     Stash the neo fields that aren't required and clear
     them on the instance so that they aren't saved to db
     '''
-    for key in NEO_ATTR.difference(JMBO_REQUIRED_FIELDS):
+    for key in (NEO_ATTR.union(ADDRESS_FIELDS)).difference(JMBO_REQUIRED_FIELDS):
         cleared_fields[key] = getattr(member, key)
         '''
         If field can be null, set to None. Otherwise assign
@@ -149,7 +149,7 @@ def update_consumer(member):
     consumer_id = NeoProfile.objects.get(user=member).consumer_id
     if not USE_MCAL:
         # update changed attributes
-        old_member = cache.get(cache_key, None)
+        old_member = cache.get('neo_consumer_%s' % member.pk, None)
         wrapper = ConsumerWrapper()
         if old_member is not None:  # it should never be None
             for k in NEO_ATTR:
@@ -218,18 +218,17 @@ def save_member(member, *args, **kwargs):
     except api.NeoError as e:
         raise ValidationError(str(e))
     
-    cleared_fields = None
     if not USE_MCAL:
-        # cache this member after it is created/updated successfully
-        cache.set(cache_key, dict((k, getattr(member, k, None)) \
-            for k in NEO_ATTR.union(ADDRESS_FIELDS)), 1200)
         # stash fields and reassign them after save
         cleared_fields = stash_neo_fields(member)
     super(Member, member).save(*args, **kwargs)
     NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
-    if cleared_fields:
-        for key, val in member.cleared_fields.iteritems():
+    if not USE_MCAL:
+        for key, val in cleared_fields.iteritems():
             setattr(member, key, val)
+	cleared_fields.update(dict((k, getattr(member, k)) for k in JMBO_REQUIRED_FIELDS))
+	# cache the member fields after successfully creating/updating
+	cache.set('neo_consumer_%s' % member.pk, cleared_fields, 1200)
 
 
 def save_user(user, *args, **kwargs):
