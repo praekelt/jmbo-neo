@@ -1,4 +1,6 @@
-# Constants recognized by Neo Web Services
+'''
+Constants recognized by Neo Web Services
+'''
 
 
 # Country code to option ID mapping

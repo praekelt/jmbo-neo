@@ -6282,7 +6282,10 @@ def get_root_tag(node):
     tag = Tag_pattern_.match(node.tag).groups()[-1]
     rootClass = globals().get(tag)
     if not rootClass:
-        rootClass = globals().get(tag + "Type")
+        if tag == 'Responses':
+            rootClass = ResponseListType
+        else:
+            rootClass = globals().get(tag + "Type")
     return tag, rootClass
 
 

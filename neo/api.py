@@ -1,36 +1,67 @@
 import base64
 import re
 import requests
-from requests.auth import HTTPBasicAuth
 from datetime import date
 from StringIO import StringIO
 import copy
 
 from django.conf import settings
+from django.core import exceptions
+from django.utils.translation import ugettext_lazy as _
 
-from neo.xml import parseString, GDSParseError
+from neo.xml import parseString, GDSParseError, ResponseListType, ResponseType
 
 
-# get Neo config from Django settings module or use test defaults
-CONFIG = getattr(settings, 'NEO')
-# the base url for Neo services
-BASE_URL = '/'.join((CONFIG['URL'], CONFIG['APP_ID'], CONFIG['VERSION_ID']))
-# make the request module catch all exceptions
-requests.defaults.safe_mode = True
-# use basic http authentication
-HEADERS = {'content-type': 'application/xml'}
-if CONFIG.get('USE_MCAL', False):
-    HEADERS['Proxy-Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'])))
-# keyword args used in all requests
-r_kwargs = {
-    'verify': CONFIG.get('VERIFY_CERT', True),
-    'headers': HEADERS,
-}
+# get Neo config from Django settings module
+try:
+    CONFIG = getattr(settings, 'NEO')
+    # the base url for Neo services
+    BASE_URL = '/'.join((CONFIG['URL'], CONFIG['APP_ID'], CONFIG['VERSION_ID']))
+    # make the request module catch all exceptions
+    requests.defaults.safe_mode = True
+    # use basic http authentication
+    HEADERS = {'content-type': 'application/xml'}
+    if CONFIG.get('USE_MCAL', False):
+        HEADERS['Proxy-Authorization'] = 'Basic %s' % base64.b64encode(':'.join((CONFIG['APP_ID'], CONFIG['PASSWORD'])))
+    # keyword args used in all requests
+    r_kwargs = {
+        'verify': CONFIG.get('VERIFY_CERT', True),
+        'headers': HEADERS,
+    }
+except AttributeError:
+    raise exceptions.ImproperlyConfigured("Neo settings are missing.")
+except KeyError as e:
+    raise exceptions.ImproperlyConfigured("Neo setting %s is missing." % str(e))
 
-# the Neo exception that should be raised if a Neo communication fails
-class NeoError(Exception):
-    pass
 
+# Determine the appropriate error 
+def _get_error(response):
+    if response.status_code == 500:
+        return Exception("Neo Web Services not responding")
+    try:
+        neo_resp = parseString(response.content)
+        errors = None
+        if isinstance(neo_resp, ResponseListType):
+            errors = neo_resp.Response
+        elif isinstance(neo_resp, ResponseType):
+            errors = [neo_resp]
+        else:
+            return Exception(response.content)
+        err_msg_list = []
+        for error in errors:
+            if error.ResponseCode == 'INVALID_APPID':
+                return exceptions.ImproperlyConfigured("Neo App ID is invalid.")
+            elif error.ResponseCode == 'INVALID_VERSION':
+                return exceptions.ImproperlyConfigured("Neo API version is invalid.")
+            elif error.ResponseCode == 'BAD_REQUEST' or response.request.method == 'POST' or \
+                response.request.method == 'PUT':
+                err_msg_list.append(_(error.ResponseMessage))
+            else:
+                return Exception(response.content)
+        return exceptions.ValidationError(err_msg_list)
+    except GDSParseError:
+        return Exception(response.content)
+    
 
 # authenticates using either username/password or a remember me token
 def authenticate(username=None, password=None, token=None, promo_code=None, acq_src=None):
@@ -43,12 +74,10 @@ def authenticate(username=None, password=None, token=None, promo_code=None, acq_
     if acq_src:
         params['acquisitionsource'] = acq_src
         
-    response = requests.get("%s/consumers/useraccount" % (BASE_URL, ), \
+    response = requests.get("%s/consumers/useraccount/" % (BASE_URL, ), \
         params=params, **r_kwargs)
     if response.status_code == 200:
         return response.content  # response body contains consumer_id
-    elif response.status_code == 400:  # bad request
-        raise NeoError("In authenticate: %s %s" % (response.status_code, response.content))
     return None
 
 
@@ -60,7 +89,7 @@ def logout(consumer_id, promo_code=None, acq_src=None):
     response = requests.put("%s/consumers/%s/useraccount/notifylogout" % (BASE_URL, consumer_id),
         params=params, **r_kwargs)
     if response.status_code != 200:
-        raise NeoError("In logout: %s %s" % (response.status_code, response.content))
+        raise _get_error(response)
 
 
 # stores a remember me token on Neo server
@@ -68,7 +97,7 @@ def remember_me(consumer_id, token):
     response = requests.put("%s/consumers/%s/useraccount" % (BASE_URL, consumer_id),
         params={'authtoken': token}, **r_kwargs)
     if response.status_code != 200:
-        raise NeoError("In remember_me: %s %s" % (response.status_code, response.content))
+        raise _get_error(response)
 
 
 # creates a consumer and returns the consumer id and validation uri
@@ -86,7 +115,7 @@ def create_consumer(consumer):
         if match:
             return match.group('id'), uri
     else:
-        raise NeoError("In create_consumer: %s %s" % (response.status_code, response.content))
+        raise _get_error(response)
 
 
 # activates the newly created consumer account, optionally using a validation uri
@@ -100,7 +129,7 @@ def complete_registration(consumer_id, uri=None):
     else:
         response = requests.get(uri)
     if response.status_code != 200:
-        raise NeoError("In complete_registration: %s %s" % (response.status_code, response.content))
+        raise _get_error(response)
 
 
 # retrieves a list of consumers' identified by email/mobile id and DOB
@@ -116,7 +145,7 @@ def get_consumers(email_id, dob):
         except GDSParseError:
             pass
     
-    raise NeoError("In get_consumers: %s %s" % (response.status_code, response.content))
+    raise _get_error(response)
 
 
 # links a consumer account from another app with this app
@@ -138,7 +167,7 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
         except GDSParseError:
             pass
 
-    raise NeoError("In link_consumer: %s %s" % (response.status_code, response.content))
+    raise _get_error(response)
 
 
 # get a consumer object containing all the consumer data
@@ -153,7 +182,7 @@ def get_consumer(consumer_id):
         except GDSParseError:
             pass
     
-    raise NeoError("In get_consumer: %s %s" % (response.status_code, response.content))
+    raise _get_error(response)
 
 
 # get a consumer's profile
@@ -168,7 +197,7 @@ def get_consumer_profile(consumer_id):
         except GDSParseError:
             pass
     
-    raise NeoError("In get_consumer_profile: %s %s" % (response.status_code, response.content))
+    raise _get_error(response)
 
 
 # get a consumer's preferences
@@ -184,7 +213,7 @@ def get_consumer_preferences(consumer_id, category_id=None):
         except GDSParseError:
             pass
 
-    raise NeoError("In get_consumer_preferences: %s %s" % (response.status_code, response.content))
+    raise _get_error(response)
 
 
 # update a consumer's data on the Neo server
@@ -198,7 +227,7 @@ def update_consumer(consumer_id, consumer):
         data=data_stream.getvalue(), **r_kwargs)
     data_stream.close()
     if response.status_code != 200:
-        raise NeoError("In update_consumer: %s %s" % (response.status_code, response.content))
+        raise _get_error(response)
 
 
 # create consumer preferences
@@ -216,7 +245,7 @@ def update_consumer_preferences(consumer_id, preferences, category_id=None, crea
         response = requests.put(uri, data=data_stream.getvalue(), **r_kwargs)
     data_stream.close()
     if response.status_code != 200:
-        raise NeoError("In update_consumer_preferences: %s %s" % (response.status_code, response.content))
+        raise _get_error(response)
 
 
 # deletes the consumer account
@@ -238,7 +267,7 @@ def get_forgot_password_token(username):
         except GDSParseError:
             pass
 
-    raise NeoError("In get_forgot_password_token: %s %s" % (response.status_code, response.content))
+    raise _get_error(response)
 
 
 # changes user's password, possibly using the token generated by get_forgot_password_token
@@ -262,7 +291,7 @@ def change_password(username, new_password, old_password=None, token=None):
     if response.status_code == 200:
         return response.content
     
-    raise NeoError("In change_password: %s %s" % (response.status_code, response.content))
+    raise _get_error(response)
 
 
 # unsubscribe from some brand or communication channel
@@ -275,7 +304,7 @@ def unsubscribe(consumer_id, unsubscribe_obj):
         data=data_stream.getvalue(), **r_kwargs)
     data_stream.close()
     if response.status_code != 200:
-        raise NeoError("In unsubscribe: %s %s" % (response.status_code, response.content))
+        raise _get_error(response)
 
 
 # add a promo code to a consumer (from master promo code list)
@@ -288,7 +317,7 @@ def add_promo_code(consumer_id, promo_code, acq_src=None):
     response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id), \
         params=params, **r_kwargs)
     if response.status_code != 200:
-        raise NeoError("In add_promo_code: %s %s" % (response.status_code, response.content))
+        raise _get_error(response)
 
 
 # check if the user is of allowable age
@@ -309,7 +338,7 @@ def do_age_check(dob, country_code, gateway_id, language_code=None):
         except GDSParseError:
             pass
         
-    raise NeoError("In do_age_check: %s %s" % (response.status_code, response.content))
+    raise _get_error(response)
 
 
 # get country details
@@ -328,5 +357,4 @@ def get_country(country_code=None, ip_address=None):
         except GDSParseError:
             pass
 
-    raise NeoError("In get_country: %s %s" % (response.status_code, response.content))
-
+    raise _get_error(response)

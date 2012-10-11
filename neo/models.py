@@ -14,12 +14,6 @@ from jmbo.models import ModelBase
 from foundry.models import Member, Country
 from foundry.forms import PasswordResetForm
 
-'''try:
-    from competition.models import CompetitionEntry
-    COMPETITION_IS_ACTIVE = True
-except:
-    COMPETITION_IS_ACTIVE = False'''
-
 from neo import api
 from neo.utils import ConsumerWrapper
 from neo.constants import modify_flag, country_option_id
@@ -29,44 +23,6 @@ class NeoProfile(models.Model):
     user = models.ForeignKey(User, unique=True)
     # the Neo consumer id used in API requests
     consumer_id = models.PositiveIntegerField(primary_key=True)
-
-
-'''
-A model that associates a Neo promo code with some interactive content.
-If a user interacts with this object, the promo code is added to their consumer profile
-on Neo. Only supports competitions for now.
-'''
-'''class NeoPromo(models.Model):
-    promo_code = models.CharField(
-        max_length=50,
-    )
-    promo_object = models.ForeignKey(
-        ModelBase,
-        limit_choices_to=(Q(content_type__model='competition')),
-    )
-
-
-def add_promo_code_to_consumer(sender, **kwargs):
-    promo_object = None
-    user = None
-    sender_id = "%s.%s" % (sender._meta.app_label, sender._meta.module_name)
-    if sender_id == 'competition.competitionentry':
-        promo_object = kwargs['instance'].competition
-        user = kwargs['instance']
-    if promo_object and user:    
-        try:
-            promo_code = NeoPromo.objects.get(promo_object=promo_object).promo_code
-            try:
-                consumer_id = NeoProfile.objects.get(user=user).consumer_id
-                api.add_promo_code(consumer_id, promo_code)
-            except NeoProfile.DoesNotExist:
-                pass
-        except NeoPromo.DoesNotExist:
-            pass
-
-
-if COMPETITION_IS_ACTIVE:
-    signals.post_save.connect(add_promo_code_to_consumer, sender=CompetitionEntry)'''
 
 
 '''
@@ -210,13 +166,10 @@ def update_consumer(member):
 
 def save_member(member, *args, **kwargs):
     member.full_clean()
-    try:
-        if member.pk:
-            consumer_id = update_consumer(member)
-        else:
-            consumer_id = create_consumer(member)
-    except api.NeoError as e:
-        raise ValidationError(str(e))
+    if member.pk:
+        consumer_id = update_consumer(member)
+    else:
+        consumer_id = create_consumer(member)
     
     if not USE_MCAL:
         # stash fields and reassign them after save
@@ -238,14 +191,11 @@ def save_user(user, *args, **kwargs):
         raw_password = getattr(user, 'raw_password', None)
         if raw_password:
             old_password = getattr(user, 'old_password', None)
-            try:
-                if old_password:
-                    api.change_password(user.username, raw_password, old_password=old_password)
-                else:
-                    api.change_password(user.username, raw_password, token=user.forgot_password_token)
-            except api.NeoError as e:
-                delattr(user, 'raw_password')
-                raise ValidationError(str(e))
+            delattr(user, 'raw_password')
+            if old_password:
+                api.change_password(user.username, raw_password, old_password=old_password)
+            else:
+                api.change_password(user.username, raw_password, token=user.forgot_password_token)
 
     super(User, user).save(*args, **kwargs)
 

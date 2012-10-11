@@ -155,28 +155,4 @@ class NeoTestCase(TestCase):
         member.set_password('new_password')
         member.save()
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
-        self.assertTrue(self.client.login(username=member.username, password='new_password'))
-
-    '''def test_add_competition_promocode(self):
-        member = self.create_member()
-        competition = Competition.objects.create(
-            title="Competition",
-            content="Content",
-            start_date=timezone.now().date(),
-            end_date=(timezone.now() + timedelta(days=1)).date(),
-        )
-	site_ids = list(Site.objects.all().values_list('id', flat=True))
-        competition.sites.add(*site_ids)
-        competition.publish()
-        neo_promo = NeoPromo.objects.create(
-            promo_code="competition_promo_code",
-            promo_object=competition,
-        )
-        self.login_basic(member)
-	try:
-            self.client.post(reverse('competition-detail', kwargs={'slug': competition.slug}), {'accept_terms': True})
-        except:
-	    pass
-	consumer = api.get_consumer(NeoProfile.objects.get(user=member).consumer_id)
-        self.assertEqual(neo_promo.promo_code, consumer.ConsumerProfile.PromoCode)'''
-        
+        self.assertTrue(self.client.login(username=member.username, password='new_password'))      
