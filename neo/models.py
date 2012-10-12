@@ -5,7 +5,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import signals, Q
 from django.dispatch import receiver
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
 
@@ -164,18 +163,27 @@ def update_consumer(member):
     return consumer_id
 
 
-def save_member(member, *args, **kwargs):
-    member.full_clean()
+def clean_member(member):
+    super(Member, member).full_clean(called_from_child=True)
+    # attempt to store the data on Neo in order to validate it
     if member.pk:
         consumer_id = update_consumer(member)
     else:
         consumer_id = create_consumer(member)
+    member.need_to_clean_member = False
+    member.consumer_id = consumer_id
+
     
+def save_member(member, *args, **kwargs):
+    if getattr(member, 'need_to_clean_member', True):
+        member.full_clean()
+        member.need_to_clean_member = True
+
     if not USE_MCAL:
         # stash fields and reassign them after save
         cleared_fields = stash_neo_fields(member)
     super(Member, member).save(*args, **kwargs)
-    NeoProfile.objects.get_or_create(user=member, consumer_id=consumer_id)
+    NeoProfile.objects.get_or_create(user=member, consumer_id=member.consumer_id)
     if not USE_MCAL:
         for key, val in cleared_fields.iteritems():
             setattr(member, key, val)
@@ -184,18 +192,27 @@ def save_member(member, *args, **kwargs):
 	cache.set('neo_consumer_%s' % member.pk, cleared_fields, 1200)
 
 
-def save_user(user, *args, **kwargs):
-    user.full_clean()
-    if not isinstance(user, Member) and NeoProfile.objects.filter(user=user).exists():
-	# check if password needs to be changed
+def clean_user(user, called_from_child=False):
+    super(User, user).full_clean()
+    if not called_from_child:
+        # check if password needs to be changed
         raw_password = getattr(user, 'raw_password', None)
         if raw_password:
+            # attempt to change password in order to validate it
             old_password = getattr(user, 'old_password', None)
             delattr(user, 'raw_password')
             if old_password:
                 api.change_password(user.username, raw_password, old_password=old_password)
             else:
                 api.change_password(user.username, raw_password, token=user.forgot_password_token)
+    user.need_to_clean_user = False
+
+
+def save_user(user, *args, **kwargs):
+    if not isinstance(user, Member) and NeoProfile.objects.filter(user=user).exists():
+        if getattr(user, 'need_to_clean_user', True):
+            user.full_clean()
+            user.need_to_clean_user = True
 
     super(User, user).save(*args, **kwargs)
 
@@ -244,4 +261,6 @@ Patch User and Member
 '''
 User.set_password = set_password
 User.save = save_user
+User.full_clean = clean_user
 Member.save = save_member
+Member.full_clean = clean_member

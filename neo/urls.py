@@ -2,7 +2,7 @@ from django.conf.urls.defaults import patterns, url, include
 
 from foundry import forms
 
-from neo.utils import NeoTokenGenerator, NeoPasswordChangeForm
+from neo.forms import NeoTokenGenerator, NeoPasswordChangeForm
 
 
 neo_token_generator = NeoTokenGenerator()
