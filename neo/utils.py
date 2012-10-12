@@ -1,8 +1,6 @@
 from datetime import date, datetime
 
 from django.conf import settings
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.contrib.auth.forms import PasswordChangeForm
 
 from foundry.models import Country
 
@@ -18,33 +16,6 @@ from neo import api
 BRAND_ID = getattr(settings, 'NEO')['BRAND_ID']
 PROMO_CODE = getattr(settings, 'NEO')['PROMO_CODE']
 
-
-'''
-A token generator to be used in password_reset and password_reset_confirm
-forms - the token can then be used to change the user's password locally
-and on Neo
-'''
-class NeoTokenGenerator(PasswordResetTokenGenerator):
-    def make_token(self, user):
-        return api.get_forgot_password_token(user.username).TempToken
-        
-    def check_token(self, user, token):
-        user.forgot_password_token = token
-        return True
-
-
-'''
-Overrides the Django password change form so that the the old password
-is stored in clear text on the user object, thus making it accessible
-to Neo
-'''
-class NeoPasswordChangeForm(PasswordChangeForm):
-    def save(self, commit=True):
-        self.user.set_password(self.cleaned_data['new_password1'], \
-            old_password=self.cleaned_data['old_password'])
-        if commit:
-            self.user.save()
-        return self.user
 
 '''
 A wrapper class that makes it easier to manage a consumer object

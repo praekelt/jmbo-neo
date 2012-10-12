@@ -16,7 +16,7 @@ from foundry.models import Member, Country
 from competition.models import Competition
 
 from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
-from neo.utils import NeoTokenGenerator
+from neo.forms import NeoTokenGenerator
 from neo import api
 
 class NeoTestCase(TestCase):
