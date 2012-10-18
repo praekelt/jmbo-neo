@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+	<xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+
+	<xs:element name="Emails">
+
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Email" type="EmailType" minOccurs="1"	maxOccurs="unbounded"></xs:element>
+				<xs:element name="ConsumerID" type="xs:long" minOccurs="0" maxOccurs="1"></xs:element>
+				<xs:element name="PromoCode" type="PromoCodeDesc" minOccurs="1" maxOccurs="1"></xs:element>
+			    <xs:element name="AcquisitionSource" type="AcquisitionSourceType" minOccurs="0"></xs:element>				
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:simpleType name="Subject">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="100"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="EmailBody">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="10000"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="FileNameType">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="5"></xs:minLength>
+			<xs:maxLength value="50"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="FileContentType">
+		<xs:restriction base="xs:base64Binary">
+			<xs:minLength value="5"></xs:minLength>
+			<xs:maxLength value="1000000000"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:complexType name="AttachmentType">
+		<xs:sequence>
+			<xs:element name="FileName" type="FileNameType"></xs:element>
+			<xs:element name="FileContent" type="FileContentType"></xs:element>		
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:complexType name="EmailType">
+		<xs:sequence>
+			<xs:element name="ToAddress" type="EmailId" minOccurs="1"
+				maxOccurs="unbounded">
+			</xs:element>
+			<xs:element name="FromAddress" type="EmailId"
+				minOccurs="1" maxOccurs="1">
+			</xs:element>
+			<xs:element name="Subject" type="Subject" minOccurs="1"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="EmailBody" type="EmailBody" minOccurs="1"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="Attachment" type="AttachmentType" minOccurs="0"
+				maxOccurs="unbounded">
+			</xs:element>
+			<xs:element name="UnsolicitedEmailFlag" type="UnsolicitedEmailFlagType" minOccurs="1"
+				maxOccurs="1">
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:simpleType name="AccountStatus">
+		<xs:restriction base="xs:byte">
+			<xs:fractionDigits value="0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="AreaCode">
+		<xs:restriction base="Name">
+			<xs:maxLength value="10" />
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="Address">
+		<xs:restriction base="xs:string"/>
+	</xs:simpleType>
+	<xs:simpleType name="Address1">
+		<xs:restriction base="Address">
+			<xs:maxLength value="200"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Address2">
+		<xs:restriction base="Address">
+			<xs:maxLength value="200"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="LanguageCode">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="10"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="LocaleCode">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="10"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Address3">
+		<xs:restriction base="Address">
+			<xs:maxLength value="200"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Address4">
+		<xs:restriction base="Address">
+			<xs:maxLength value="200"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="AddressType">
+		<xs:restriction base="xs:byte">
+			<xs:fractionDigits value="0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="EmailCategory">
+		<xs:restriction base="xs:byte">
+			<xs:fractionDigits value="0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="IsDefaultFlagType">
+		<xs:restriction base="xs:byte">
+			<xs:fractionDigits value="0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CityName">
+		<xs:restriction base="Name">
+			<xs:maxLength value="100"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Company">
+		<xs:restriction base="Consumer">
+			<xs:maxLength value="80"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Consumer">
+		<xs:restriction base="xs:string"/>
+	</xs:simpleType>
+	<xs:simpleType name="CountryName">
+		<xs:restriction base="Name">
+			<xs:maxLength value="100"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Date">
+		<xs:restriction base="xs:date"/>
+	</xs:simpleType>
+	<xs:simpleType name="Datetimestamp">
+		<xs:restriction base="xs:dateTime"/>
+	</xs:simpleType>
+	<xs:simpleType name="Education">
+		<xs:restriction base="Consumer">
+			<xs:maxLength value="50"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="EmailId">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="320" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="FirstName">
+		<xs:restriction base="Name">
+			<xs:maxLength value="50" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="Flag">
+		<xs:restriction base="xs:byte"/>
+	</xs:simpleType>
+	
+	<xs:simpleType name="Gender">
+		<xs:restriction base="Flag"/>
+	</xs:simpleType>
+
+	<xs:simpleType name="LastName">
+		<xs:restriction base="Name">
+			<xs:maxLength value="50" />
+		</xs:restriction>
+	</xs:simpleType>
+
+
+
+	<xs:simpleType name="LoginName">
+		<xs:restriction base="Name">
+			<xs:maxLength value="70" />
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="MaritalStatus">
+		<xs:restriction base="xs:byte">
+			<xs:fractionDigits value="0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="MiddleName">
+		<xs:restriction base="Name">
+			<xs:maxLength value="50" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="Name">
+		<xs:restriction base="xs:string"/>
+	</xs:simpleType>
+	<xs:simpleType name="NationalID">
+		<xs:restriction base="Consumer">
+			<xs:maxLength value="30"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Office">
+		<xs:restriction base="Name">
+			<xs:maxLength value="200"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Option">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="500"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="PassportNumber">
+		<xs:restriction base="Consumer">
+			<xs:maxLength value="30"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Password">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="50"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="PhoneNumber">
+		<xs:restriction base="Name">
+			<xs:maxLength value="20"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="PhoneType">
+		<xs:restriction base="xs:byte">
+			<xs:fractionDigits value="0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Profession">
+		<xs:restriction base="Consumer">
+			<xs:maxLength value="50"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="PromoCodeDesc">
+		<xs:restriction base="Name">
+			<xs:maxLength value="50"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Question">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="1000"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="QuestionCategory">
+		<xs:restriction base="xs:long">			
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="SingleSignonActive">
+		<xs:restriction base="xs:byte">
+			<xs:fractionDigits value="0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="StateName">
+		<xs:restriction base="Name">
+			<xs:maxLength value="100"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Tint">
+		<xs:restriction base="xs:byte">
+			<xs:fractionDigits value="0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Title">
+		<xs:restriction base="Consumer">
+			<xs:maxLength value="10"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ZipCode">
+		<xs:restriction base="Name">
+			<xs:maxLength value="20"/>
+		</xs:restriction>
+	</xs:simpleType>
+  <xs:complexType name="CategoryType">
+    <xs:sequence>
+      <xs:element name="CategoryID" type="QuestionCategory"
+				minOccurs="1" maxOccurs="1">
+      </xs:element>
+      <xs:element name="QuestionAnswers"
+				type="QuestionAnswerType" minOccurs="0" maxOccurs="unbounded">
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="QuestionAnswerType">
+		<xs:sequence>
+			<xs:element name="QuestionID" type="xs:long" minOccurs="1"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="Answer" type="AnswerType" minOccurs="1" maxOccurs="unbounded"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="ResponseCode">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="100"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="ResponseMessage">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="500"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+
+
+	<xs:complexType name="AnswerType">		
+		<xs:sequence>
+			<xs:element name="OptionID" type="xs:long" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="BrandID" type="BrandID" minOccurs="0"	maxOccurs="1"></xs:element>
+			<xs:element name="DrinkCategoryID" type="DrinkCategoryID" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="CommunicationChannel"	type="CommunicationChannel" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="AnswerText" type="AnswerText"	minOccurs="0" maxOccurs="1"></xs:element>
+		</xs:sequence>	
+	</xs:complexType>
+
+	<xs:simpleType name="BrandID">
+		<xs:restriction base="xs:long">
+			
+		</xs:restriction>
+	</xs:simpleType>
+
+
+	<xs:simpleType name="CommunicationChannel">
+		<xs:restriction base="xs:byte"></xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="AnswerText">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="500"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+
+
+	<xs:simpleType name="DrinkCategoryID">
+		<xs:restriction base="xs:long"></xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="ModifyFlag">
+		<xs:restriction base="xs:string"></xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="Suffix">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="15"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<!--  Added for handling Min and Max Length -->
+	<xs:simpleType name="URL">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="1000"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="FullName">
+		<xs:restriction base="Name">
+			<xs:maxLength value="150" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="Token">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="20" />
+		</xs:restriction>
+	</xs:simpleType>
+	
+
+	<xs:simpleType name="CurrencyCode">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="2"></xs:minLength>
+			<xs:maxLength value="5"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="TimeZoneType">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="2"></xs:minLength>
+			<xs:maxLength value="200"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="OffsetType">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"></xs:minLength>
+			<xs:maxLength value="6"></xs:maxLength>		
+		</xs:restriction>
+	</xs:simpleType>
+
+
+	<xs:simpleType name="ConsumerIDType">
+		<xs:restriction base="xs:long"></xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="LoginSuccessFlagType">
+		<xs:restriction base="xs:boolean"></xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="LoginTimeType">
+		<xs:restriction base="xs:dateTime"></xs:restriction>
+	</xs:simpleType>
+	
+	<xs:complexType name="EmailDetailsType">
+		<xs:sequence>
+			<xs:element name="Id" type="xs:long" minOccurs="0" maxOccurs="1"></xs:element>
+			<xs:element name="EmailId" type="EmailId" minOccurs="1"	maxOccurs="1"></xs:element>
+			<xs:element name="EmailCategory" type="EmailCategory" minOccurs="1" maxOccurs="1"></xs:element>
+			<xs:element name="IsDefaultFlag" type="IsDefaultFlagType" minOccurs="1" maxOccurs="1"></xs:element>
+			<xs:element name="ModifyFlag" type="xs:string" minOccurs="1" maxOccurs="1">
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:simpleType name="ApplicationNameType">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="0"></xs:minLength> 
+			<xs:maxLength value="200"></xs:maxLength>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="UnsolicitedEmailFlagType">
+		<xs:restriction base="xs:byte">
+			<xs:fractionDigits value="0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="AcquisitionSourceType">
+		<xs:restriction base="Name">
+			<xs:maxLength value="50"/>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="ContactUsIDType">
+		<xs:restriction base="xs:long"></xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="Status">
+		<xs:restriction base="xs:byte">
+			<xs:fractionDigits value="0"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="RemarkType">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="0"></xs:minLength>
+			<xs:maxLength value="500"></xs:maxLength>		
+		</xs:restriction>
+	</xs:simpleType>
+	
+</xs:schema>

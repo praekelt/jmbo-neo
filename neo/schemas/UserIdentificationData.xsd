@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+	<xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+	<xs:element name="UserIdentificationData"
+		type="UserIdentificationDataType">
+	</xs:element>
+
+	<xs:complexType name="UserIdentificationDataType">
+		<xs:sequence>
+			<xs:element name="ConsumerID" type="ConsumerIDType" minOccurs="0"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="LoginName" type="Name" minOccurs="0"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="EmailID" type="EmailId" minOccurs="0"
+				maxOccurs="1">
+			</xs:element>
+			<xs:element name="TempToken" type="Token" minOccurs="0" maxOccurs="1"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	
+</xs:schema>

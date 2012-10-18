@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+	<xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+	<xs:include schemaLocation="Email.xsd"></xs:include>
+
+	<xs:element name="SendToFriend" type="SendToFriendType"></xs:element>
+
+	<xs:complexType name="SendToFriendType">
+		<xs:sequence>
+			<xs:element name="EmailDetails" type="EmailType"
+				minOccurs="1" maxOccurs="1">
+			</xs:element>
+			<xs:element name="ReferralDetails" type="ReferralType"
+				minOccurs="1" maxOccurs="1">
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:complexType name="ReferralType">
+		<xs:sequence>
+            <xs:element name="SenderFriendName" type="FullName" minOccurs="0" maxOccurs="1"></xs:element>
+            <xs:element name="ReferralURL" type="URL" minOccurs="0" maxOccurs="1"></xs:element>
+            <xs:element name="ConsumerID" type="xs:long" minOccurs="0" maxOccurs="1"></xs:element>
+            <xs:element name="PromoCode" type="PromoCodeDesc" minOccurs="1" maxOccurs="1"></xs:element>
+			<xs:element name="AcquisitionSource" type="AcquisitionSourceType" minOccurs="0"></xs:element>
+			<xs:element name="CommunicationChannel" type="CommunicationChannel"></xs:element>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

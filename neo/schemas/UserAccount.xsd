@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+
+	<xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+	<xs:element name="UserAccount" type="UserAccountType"></xs:element>
+
+	<xs:complexType name="UserAccountType">
+		<xs:sequence>
+			<xs:element name="LoginCredentials"
+				type="LoginCredentialsType" minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="SecretQuestions"
+				type="QuestionAnswerType" minOccurs="0"
+				maxOccurs="1">
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:complexType name="LoginCredentialsType">
+		<xs:sequence>
+			<xs:element name="LoginName" type="LoginName"
+				nillable="true" minOccurs="1" maxOccurs="1">
+				
+			</xs:element>
+			<xs:element name="Password" type="Password"
+				nillable="true" minOccurs="0" maxOccurs="1">
+				
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+
+
+</xs:schema>

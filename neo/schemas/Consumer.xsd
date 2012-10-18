@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+	<xs:include schemaLocation="Preferences.xsd"></xs:include>
+	<xs:include schemaLocation="UserAccount.xsd"></xs:include>
+	<xs:include schemaLocation="Profile.xsd"></xs:include>
+  <xs:include schemaLocation="SocialNetworks.xsd"></xs:include>
+  <xs:include schemaLocation="ConversionLocations.xsd"></xs:include>
+  <xs:include schemaLocation="FacebookConnect.xsd"></xs:include>
+  <xs:include schemaLocation="DigitalInteractions.xsd"></xs:include>
+  <xs:include schemaLocation="ExtendedProfile.xsd"></xs:include>
+  <xs:include schemaLocation="ExtendedOptInPreferences.xsd"></xs:include>
+  <xs:include schemaLocation="HubLifeStyles.xsd"></xs:include>
+  <xs:element name="Consumer">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ConsumerProfile"
+					type="ConsumerProfileType" minOccurs="1" maxOccurs="1">
+				</xs:element>
+				<xs:element name="Preferences" type="PreferencesType" minOccurs="0" maxOccurs="1">
+				</xs:element>
+        <xs:element name="SocialNetworks" type="SocialNetworksType" minOccurs="0" maxOccurs="1">
+        </xs:element>
+        <xs:element name="ConversionLocations" type="ConversionLocationsType" minOccurs="0" maxOccurs="1">
+        </xs:element>
+        <xs:element name="FacebookConnect" type="FacebookConnectType" minOccurs="0" maxOccurs="1">
+        </xs:element>
+        <xs:element name="DigitalInteractions" type="DigitalInteractionsType" minOccurs="0" maxOccurs="1">
+        </xs:element>
+        <xs:element name="ExtendedProfile" type="ExtendedProfileType" minOccurs="0" maxOccurs="1">
+        </xs:element>
+        <xs:element name="ExtendedOptInPreferences" type="ExtendedOptInPreferencesType" minOccurs="0" maxOccurs="1">
+        </xs:element>
+        <xs:element name="HubLifeStyles" type="HubLifeStylesType" minOccurs="0" maxOccurs="1">
+        </xs:element>
+        <xs:element name="UserAccount" type="UserAccountType"
+					minOccurs="0" maxOccurs="1">
+				</xs:element>
+			</xs:sequence>
+    </xs:complexType>
+	</xs:element>
+</xs:schema>
