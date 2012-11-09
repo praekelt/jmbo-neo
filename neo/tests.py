@@ -118,9 +118,8 @@ class NeoTestCase(TestCase):
     
     def test_auto_create_member(self):
         member = self.create_member()
-        member.delete()
+        Member.objects.filter(username=member.username).delete()
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
-        self.assertFalse(Member.objects.filter(username=member.username).exists())
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(Member.objects.filter(username=member.username).exists())
 
