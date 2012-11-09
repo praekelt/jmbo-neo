@@ -115,6 +115,13 @@ class NeoTestCase(TestCase):
         settings.AUTHENTICATION_BACKENDS = ('foundry.backends.MultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(self.login_basic(member))
+    
+    def test_auto_create_member(self):
+        member = self.create_member()
+        Member.objects.filter(username=member.username).delete()
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+        self.assertTrue(self.client.login(username=member.username, password='password'))
+        self.assertTrue(Member.objects.filter(username=member.username).exists())
 
     # test needs to be improved
     def test_logout(self):
