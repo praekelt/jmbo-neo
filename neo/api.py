@@ -63,6 +63,12 @@ def _get_error(response):
         return Exception(response.content)
     
 
+# create HTTP Authorization header
+def _get_auth_header(username, password, promo_code):
+    return 'Basic %s' % base64.b64encode(':'.join((username, password, \
+        promo_code if promo_code else CONFIG['PROMO_CODE'])))
+
+
 # authenticates using either username/password or a remember me token
 def authenticate(username=None, password=None, token=None, promo_code=None, acq_src=None):
     params = {'promocode': promo_code if promo_code else CONFIG['PROMO_CODE']}
@@ -174,11 +180,16 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
 
 
 # get a consumer object containing all the consumer data
-def get_consumer(consumer_id):
+def get_consumer(consumer_id, username=None, password=None, promo_code=None):
+    new_r_kwargs = r_kwargs
     if CONFIG.get('USE_MCAL', False):
-        raise NotImplementedError("Consumer requests not supported via MCAL")
+        if username and password:
+            new_r_kwargs = copy.deepcopy(r_kwargs)
+            new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, promo_code)
+        else:
+            raise NotImplementedError("Consumer requests not supported via MCAL")
     response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id), \
-        **r_kwargs)
+        **new_r_kwargs)
     if response.status_code == 200:
         try:
             return parseString(response.content)

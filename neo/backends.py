@@ -1,9 +1,12 @@
 from django.contrib.auth.models import User
 
 from foundry.backends import MultiBackend
+from foundry.models import Member
 
-from neo.models import NeoProfile
+from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
+from neo import api
 from neo.api import authenticate as authenticate_neo
+from neo.utils import ConsumerWrapper
 
 
 class NeoBackend(MultiBackend):
@@ -23,6 +26,20 @@ class NeoBackend(MultiBackend):
                 break
         
         if obj is None:
+            # try to log in via Neo
+            consumer_id = authenticate_neo(username, password)
+            if consumer_id:
+                # create the member using data from Neo
+                consumer = api.get_consumer(consumer_id, username, password)
+                wrapper = ConsumerWrapper(consumer=consumer)
+                attrs = dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
+                attrs.update(wrapper.address)
+                member = Member(**attrs)
+                # don't want save method to attempt to create a consumer
+                member.need_to_clean_member = False
+                member.consumer_id = consumer_id
+                member.save()
+                return member
             return None
 
         # Obj is an instance of either user or a subclass of user, or else a
