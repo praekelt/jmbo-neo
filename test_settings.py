@@ -19,6 +19,12 @@ CACHES = {
     }
 }
 
+AUTHENTICATION_BACKENDS = (
+    'neo.backends.NeoBackend',
+    'foundry.backends.MultiBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -75,12 +81,13 @@ INSTALLED_APPS = [
 ]
 #'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
 NEO = {
-    'URL': 'https://209.207.228.8/neowebservices',
+    'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
     'APP_ID': '35001',
     'VERSION_ID': '1.3',
     'PROMO_CODE': 'testPromo',
     'BRAND_ID': 12,
     'VERIFY_CERT': False,
+    'USE_MCAL': True,
 }
 
 STATIC_URL = 'static/'

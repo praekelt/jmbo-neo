@@ -1,7 +1,7 @@
 import os.path
 import re
 import time
-from datetime import timedelta
+from datetime import timedelta, date, datetime
 
 from django.test import TestCase
 from django.test.client import Client
@@ -11,6 +11,13 @@ from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.contrib.sessions.models import Session
 from django.contrib.sites.models import Site
+from django.http import HttpRequest
+from django.utils.importlib import import_module
+from django.contrib.auth import login, get_backends
+from django.contrib.auth.models import User
+from django.db import connection, transaction
+from django.db.models.fields import FieldDoesNotExist
+from django.contrib.auth.hashers import make_password
 
 from foundry.models import Member, Country
 from competition.models import Competition
@@ -38,6 +45,11 @@ class NeoTestCase(TestCase):
             'zipcode': 'zipcode',
             'gender': 'F',
         }
+        settings.SESSION_ENGINE = 'django.contrib.sessions.backends.file'
+        engine = import_module(settings.SESSION_ENGINE)
+        store = engine.SessionStore()
+        store.save()
+        self.session = store
 
     def create_member(self):
         attrs = self.member_attrs.copy()
@@ -107,7 +119,22 @@ class NeoTestCase(TestCase):
                 new_val = "new_" + val
             self.assertEqual(getattr(member, key), new_val)
 
-    def test_login(self):
+    def test_login_logout(self):
+        '''
+        jmbo-foundry allows user login without authentication, e.g. right after a user joins.
+        This breaks functionality that relies on authentication occurring before login.
+        '''
+        member = self.create_member()
+        request = HttpRequest()
+        request.session = self.session
+        request.COOKIES[settings.SESSION_COOKIE_NAME] = self.session.session_key
+        backend = get_backends()[0]
+        member.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
+        login(request, member)
+        self.client.cookies[settings.SESSION_COOKIE_NAME] = self.session.session_key
+        self.client.logout()
+
+    def test_authentication(self):
         member = self.create_member()
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
@@ -116,19 +143,59 @@ class NeoTestCase(TestCase):
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(self.login_basic(member))
     
-    def test_auto_create_member(self):
+    def test_auto_create_member_from_consumer(self):
         member = self.create_member()
         Member.objects.filter(username=member.username).delete()
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(Member.objects.filter(username=member.username).exists())
 
-    # test needs to be improved
-    def test_logout(self):
-        member = self.create_member()
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+    def test_auto_create_consumer_from_member(self):
+        '''
+        Insert new member directly into db to avoid patched Member/User methods
+        '''
+        attrs = self.member_attrs.copy()
+        id = "%f" % time.time()
+        dot = id.rindex('.')
+        id = id[dot - 7:dot] + id[dot+1:dot+4]
+        attrs['username'] = 'user_%s' % id
+        attrs['email'] = "%s@praekeltconsulting.com" % id
+        attrs['mobile_number'] = id
+        attrs['country_id'] = attrs['country'].pk
+        attrs['password'] = make_password('password')
+        del attrs['country']
+        columns_user = "("
+        values_user = "("
+        columns_member = "("
+        values_member = "("
+        for key, val in attrs.iteritems():
+            column = "%s," % key
+            if isinstance(val, basestring) or isinstance(val, bool):
+                value = "'%s'," % val
+            elif isinstance(val, date):
+                value = "'%s'," % val.strftime("%Y-%m-%d")
+            else:
+                value = "%s," % val
+            try:
+                User._meta.get_field_by_name(key)
+                values_user += value
+                columns_user += column
+            except FieldDoesNotExist:
+                values_member += value
+                columns_member += column
+        columns_user = columns_user + "is_staff,is_superuser,is_active,last_login,date_joined)"
+        values_user = values_user + "'False','False','True','now','now')"
+        cursor = connection.cursor()
+        cursor.execute("INSERT INTO auth_user %s VALUES %s" % (columns_user, values_user))
+        cursor.execute("SELECT id FROM auth_user WHERE username = '%s'" % attrs['username'])
+        pk = cursor.fetchall()[0][0]
+        columns_member = columns_member + "user_ptr_id,image,view_count,crop_from,receive_sms,receive_email,is_profile_complete)"
+        values_member = values_member + ("%d,'',0,'','False','False','True')" % pk)
+        cursor.execute("INSERT INTO foundry_member %s VALUES %s" % (columns_member, values_member))
+        transaction.commit_unless_managed()
+        member = Member.objects.get(pk=pk)
         self.client.login(username=member.username, password='password')
-        self.client.logout()
+        self.assertTrue(NeoProfile.objects.filter(user=member).exists())
 
     def test_password_change(self):
         member = self.create_member()
