@@ -12,20 +12,8 @@ from neo.utils import ConsumerWrapper
 class NeoBackend(MultiBackend):
     
     def authenticate(self, username=None, password=None):
-        obj = None
-
-        for klass, fieldnames in self._authentication_chain:
-            for fieldname in fieldnames:
-                try:
-                    obj = klass.objects.get(**{fieldname:username})
-                except klass.DoesNotExist:
-                    pass
-                else:
-                    break
-            if obj is not None:
-                break
-        
-        if obj is None:
+        user = super(NeoBackend, self).authenticate(username=username, password=password)
+        if user is None:
             # try to log in via Neo
             consumer_id = authenticate_neo(username, password)
             if consumer_id:
@@ -39,21 +27,8 @@ class NeoBackend(MultiBackend):
                 member.need_to_clean_member = False
                 member.consumer_id = consumer_id
                 member.save()
+                member.raw_password = password
                 return member
-            return None
-
-        # Obj is an instance of either user or a subclass of user, or else a
-        # profile. 
-        if isinstance(obj, User):
-            user = obj
         else:
-            user = obj.user
-
-        # Authenticate via Neo instead of Django
-        consumer_id = authenticate_neo(user.username, password)
-        if consumer_id:
-            assert NeoProfile.objects.get(consumer_id=
-                consumer_id).user.id == user.id
-            return user
-            
-        return None
+            user.raw_password = password
+        return user

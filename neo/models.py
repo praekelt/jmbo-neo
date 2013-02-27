@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.auth.signals import user_logged_out
+from django.contrib.auth.signals import user_logged_out, user_logged_in
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import signals, Q
 from django.dispatch import receiver
@@ -47,11 +47,24 @@ USE_MCAL = settings.NEO.get('USE_MCAL', False)
 
 def notify_logout(sender, **kwargs):
     try:
-        neo_profile = NeoProfile.objects.get(user=kwargs['user'])
+        neo_profile = NeoProfile.objects.only('consumer_id').get(user=kwargs['user'])
         api.logout(neo_profile.consumer_id)
     except NeoProfile.DoesNotExist:
         pass # figure out something to do here
+        
+
+def neo_login(sender, **kwargs):
+    try:
+        user = kwargs['user']
+        neo_profile = NeoProfile.objects.only('consumer_id').get(user=user)
+        # Authenticate via Neo in addition to Django
+        if hasattr(user, 'raw_password'):
+            consumer_id = api.authenticate(user.username, user.raw_password)
+    except NeoProfile.DoesNotExist:
+        pass # figure out something to do here
+
 if USE_AUTH:
+    user_logged_in.connect(neo_login)
     user_logged_out.connect(notify_logout)
 
 
@@ -153,13 +166,11 @@ def update_consumer(member):
             api.update_consumer(consumer_id, wrapper.consumer)
     
     # check if password needs to be changed
-    raw_password = getattr(member, 'raw_password', None)
-    if raw_password:
-        old_password = getattr(member, 'old_password', None)
-        if old_password:
-            api.change_password(member.username, raw_password, old_password=old_password)
-        else:
-            api.change_password(member.username, raw_password, token=member.forgot_password_token)
+    if hasattr(member, 'raw_password'):
+        if hasattr(member, 'old_password'):
+            api.change_password(member.username, member.raw_password, old_password=member.old_password)
+        elif hasattr(member, 'forgot_password_token'):
+            api.change_password(member.username, member.raw_password, token=member.forgot_password_token)
     return consumer_id
 
 
