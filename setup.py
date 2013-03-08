@@ -15,11 +15,11 @@ setup(
         'http://github.com/praekelt/jmbo-competition/tarball/feature/competition_entry_form/2.6.praekelt#egg=jmbo-competition-2.6.praekelt',
     ],
     install_requires = [
-	'jmbo-foundry',
+	'jmbo-foundry==1.1.15',
         'django-ckeditor',
         'requests',
         'lxml',
-        'django>=1.4',
+        'django>=1.4,<1.5',
     ],
     tests_require=[
 	'django-setuptest',

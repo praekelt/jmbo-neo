@@ -15,16 +15,17 @@ from django.http import HttpRequest
 from django.utils.importlib import import_module
 from django.contrib.auth import login, get_backends
 from django.contrib.auth.models import User
-from django.db import connection, transaction
 from django.db.models.fields import FieldDoesNotExist
 from django.contrib.auth.hashers import make_password
+from django.db import connection, transaction
 
-from foundry.models import Member, Country
+from foundry.models import Member, Country, RegistrationPreferences
 from competition.models import Competition
 
 from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
 from neo.forms import NeoTokenGenerator
 from neo import api
+
 
 class NeoTestCase(TestCase):
 
@@ -50,9 +51,21 @@ class NeoTestCase(TestCase):
         store = engine.SessionStore()
         store.save()
         self.session = store
+        required_fields_str = ','.join(['first_name', 'last_name', 'dob', \
+            'email', 'mobile_number', 'country', 'gender', 'city', 'country', \
+            'province', 'zipcode', 'address'])
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM preferences_registrationpreferences")
+        cursor.execute("INSERT INTO preferences_preferences (id) VALUES (1)")
+        cursor.execute("""INSERT INTO preferences_registrationpreferences (preferences_ptr_id, 
+            raw_required_fields, raw_display_fields, raw_unique_fields, raw_field_order) VALUES (1, %s, '', '', '{}')""", \
+            [required_fields_str])
+        cursor.execute("INSERT INTO preferences_preferences_sites (preferences_id, site_id) VALUES (1, 1)")
+        transaction.commit_unless_managed()
 
-    def create_member(self):
+    def create_member_partial(self, commit=True):
         attrs = self.member_attrs.copy()
+        del attrs['gender']
         # unique email and username for this test run
         id = "%f" % time.time()
         dot = id.rindex('.')
@@ -62,6 +75,13 @@ class NeoTestCase(TestCase):
         attrs['mobile_number'] = id
         member = Member(**attrs)
         member.set_password('password')
+        if commit:
+            member.save()
+        return member
+
+    def create_member(self):
+        member = self.create_member_partial(commit=False)
+        member.gender = 'F'
         member.save()
         return member
 
@@ -187,7 +207,7 @@ class NeoTestCase(TestCase):
         values_user = values_user + "'False','False','True','now','now')"
         cursor = connection.cursor()
         cursor.execute("INSERT INTO auth_user %s VALUES %s" % (columns_user, values_user))
-        cursor.execute("SELECT id FROM auth_user WHERE username = '%s'" % attrs['username'])
+        cursor.execute("SELECT id FROM auth_user WHERE username = %s", [attrs['username']])
         pk = cursor.fetchall()[0][0]
         columns_member = columns_member + "user_ptr_id,image,view_count,crop_from,receive_sms,receive_email,is_profile_complete)"
         values_member = values_member + ("%d,'',0,'','False','False','True')" % pk)
@@ -229,4 +249,13 @@ class NeoTestCase(TestCase):
         member.set_password('new_password')
         member.save()
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
-        self.assertTrue(self.client.login(username=member.username, password='new_password'))      
+        self.assertTrue(self.client.login(username=member.username, password='new_password'))
+
+    def test_member_create_on_complete(self):
+        member = self.create_member_partial()
+        self.assertFalse(NeoProfile.objects.filter(user=member).exists())
+        self.assertTrue(self.client.login(username=member.username, password='password'))
+        self.client.logout()
+        member.gender = 'F'
+        member.save()
+        self.assertTrue(NeoProfile.objects.filter(user=member).exists())
