@@ -13,7 +13,7 @@ from django.contrib.sessions.models import Session
 from django.contrib.sites.models import Site
 from django.http import HttpRequest
 from django.utils.importlib import import_module
-from django.contrib.auth import login, get_backends
+from django.contrib.auth import login, get_backends, authenticate
 from django.contrib.auth.models import User
 from django.db.models.fields import FieldDoesNotExist
 from django.contrib.auth.hashers import make_password
@@ -25,6 +25,7 @@ from competition.models import Competition
 from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
 from neo.forms import NeoTokenGenerator
 from neo import api
+from neo.utils import ConsumerWrapper
 
 
 class NeoTestCase(TestCase):
@@ -124,32 +125,47 @@ class NeoTestCase(TestCase):
                 new_val = "new_" + val
             setattr(member, key, new_val)
         member.save()
-        cache.clear()
-        # retrieve the member from db + Neo
-        member = Member.objects.all()[0]
-        # check that updated values had been stored on Neo
-        for key, val in self.member_attrs.iteritems():
-            if key == 'dob':
-                new_val = new_dob
-            elif key == 'country':
-                new_val = new_country
-            elif key == 'gender':
-                new_val = new_gender
-            else:
-                new_val = "new_" + val
-            self.assertEqual(getattr(member, key), new_val)
+        if settings.NEO.get('USE_MCAL', False):
+            consumer = api.get_consumer(member.neoprofile.consumer_id, username=member.username, password='password')
+            wrapper = ConsumerWrapper(consumer=consumer)
+            fields_to_check = self.member_attrs.copy()
+            for key in ('address', 'city', 'province', 'zipcode'):
+                del fields_to_check[key]
+            for field, val in fields_to_check.iteritems():
+                new_attr = getattr(wrapper, field)
+                if isinstance(new_attr, dict):
+                    for k, v in new_attr.iteritems():
+                        self.assertEqual(getattr(member, k), v)
+                else:
+                    self.assertEqual(getattr(member, field), new_attr)
+                
+        else:
+            cache.clear()
+            # retrieve the member from db + Neo
+            member = Member.objects.all()[0]
+            # check that updated values had been stored on Neo
+            for key, val in self.member_attrs.iteritems():
+                if key == 'dob':
+                    new_val = new_dob
+                elif key == 'country':
+                    new_val = new_country
+                elif key == 'gender':
+                    new_val = new_gender
+                else:
+                    new_val = "new_" + val
+                self.assertEqual(getattr(member, key), new_val)
 
     def test_login_logout(self):
         '''
         jmbo-foundry allows user login without authentication, e.g. right after a user joins.
         This breaks functionality that relies on authentication occurring before login.
+        EDIT: changed jmbo-foundry to authenticate before login
         '''
         member = self.create_member()
         request = HttpRequest()
         request.session = self.session
         request.COOKIES[settings.SESSION_COOKIE_NAME] = self.session.session_key
-        backend = get_backends()[0]
-        member.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
+        member = authenticate(username=member.username, password='password')
         login(request, member)
         self.client.cookies[settings.SESSION_COOKIE_NAME] = self.session.session_key
         self.client.logout()
@@ -162,6 +178,7 @@ class NeoTestCase(TestCase):
         settings.AUTHENTICATION_BACKENDS = ('foundry.backends.MultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(self.login_basic(member))
+        self.client.logout()
     
     def test_auto_create_member_from_consumer(self):
         member = self.create_member()

@@ -159,8 +159,8 @@ def get_consumers(email_id, dob):
 
 # links a consumer account from another app with this app
 def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None):
-    if CONFIG.get('USE_MCAL', False):
-        raise NotImplementedError("Consumer requests not supported via MCAL")
+    #if CONFIG.get('USE_MCAL', False):
+    #    raise NotImplementedError("Consumer requests not supported via MCAL")
     params = {
         'loginname': username,
         'password': password,
@@ -183,11 +183,8 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
 def get_consumer(consumer_id, username=None, password=None, promo_code=None):
     new_r_kwargs = r_kwargs
     if CONFIG.get('USE_MCAL', False):
-        if username and password:
-            new_r_kwargs = copy.deepcopy(r_kwargs)
-            new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, promo_code)
-        else:
-            raise NotImplementedError("Consumer requests not supported via MCAL")
+        new_r_kwargs = copy.deepcopy(r_kwargs)
+        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, promo_code)
     response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id), \
         **new_r_kwargs)
     if response.status_code == 200:
@@ -200,11 +197,13 @@ def get_consumer(consumer_id, username=None, password=None, promo_code=None):
 
 
 # get a consumer's profile
-def get_consumer_profile(consumer_id):
+def get_consumer_profile(consumer_id, username=None, password=None, promo_code=None):
+    new_r_kwargs = r_kwargs
     if CONFIG.get('USE_MCAL', False):
-        raise NotImplementedError("Consumer requests not supported via MCAL")
+        new_r_kwargs = copy.deepcopy(r_kwargs)
+        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, promo_code)
     response = requests.get("%s/consumers/%s/profile" % (BASE_URL, consumer_id), \
-        **r_kwargs)
+        **new_r_kwargs)
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -231,14 +230,16 @@ def get_consumer_preferences(consumer_id, category_id=None):
 
 
 # update a consumer's data on the Neo server
-def update_consumer(consumer_id, consumer):
+def update_consumer(consumer_id, consumer, username=None, password=None, promo_code=None):
+    new_r_kwargs = r_kwargs
     if CONFIG.get('USE_MCAL', False):
-        raise NotImplementedError("Consumer requests not supported via MCAL")
+        new_r_kwargs = copy.deepcopy(r_kwargs)
+        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, promo_code)
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
     response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id),
-        data=data_stream.getvalue(), **r_kwargs)
+        data=data_stream.getvalue(), **new_r_kwargs)
     data_stream.close()
     if response.status_code != 200:
         raise _get_error(response)
@@ -322,9 +323,9 @@ def unsubscribe(consumer_id, unsubscribe_obj):
 
 
 # add a promo code to a consumer (from master promo code list)
-def add_promo_code(consumer_id, promo_code, acq_src=None):
-    if CONFIG.get('USE_MCAL', False):
-        raise NotImplementedError("Consumer requests not supported via MCAL")
+def add_promo_code(consumer_id, promo_code, acq_src=None, username=None, password=None):
+    #if CONFIG.get('USE_MCAL', False):
+    #    raise NotImplementedError("Consumer requests not supported via MCAL")
     params = {'promocode': promo_code}
     if acq_src:
         params['acquisitionsource'] = acq_src
