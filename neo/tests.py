@@ -221,17 +221,18 @@ class NeoTestCase(TestCase):
                 values_member += value
                 columns_member += column
         columns_user = columns_user + "is_staff,is_superuser,is_active,last_login,date_joined)"
-        values_user = values_user + "'False','False','True','now','now')"
+        values_user = values_user + "0,0,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"
         cursor = connection.cursor()
         cursor.execute("INSERT INTO auth_user %s VALUES %s" % (columns_user, values_user))
         cursor.execute("SELECT id FROM auth_user WHERE username = %s", [attrs['username']])
         pk = cursor.fetchall()[0][0]
         columns_member = columns_member + "user_ptr_id,image,view_count,crop_from,receive_sms,receive_email,is_profile_complete)"
-        values_member = values_member + ("%d,'',0,'','False','False','True')" % pk)
+        values_member = values_member + ("%d,'',0,'',0,0,1)" % pk)
         cursor.execute("INSERT INTO foundry_member %s VALUES %s" % (columns_member, values_member))
         transaction.commit_unless_managed()
         member = Member.objects.get(pk=pk)
-        self.client.login(username=member.username, password='password')
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+        self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(NeoProfile.objects.filter(user=member).exists())
 
     def test_password_change(self):

@@ -58,15 +58,14 @@ def notify_logout(sender, **kwargs):
 def neo_login(sender, **kwargs):
     try:
         user = kwargs['user']
+        kwargs['request'].session['raw_password'] = user.raw_password
         neo_profile = user.neoprofile
         # Authenticate via Neo in addition to Django
-        try:
-            consumer_id = api.authenticate(user.username, user.raw_password)
-            kwargs['request'].session['raw_password'] = user.raw_password
-        except AttributeError:
-            warnings.warn("User was not logged in via Neo - raw password not available")
+        consumer_id = api.authenticate(user.username, user.raw_password)
     except NeoProfile.DoesNotExist:
-        pass # figure out something to do here
+        user.save()
+    except AttributeError:
+        warnings.warn("User was not logged in via Neo - raw password not available")
 
 if USE_AUTH:
     user_logged_in.connect(neo_login)
@@ -193,6 +192,9 @@ def clean_member(member):
             consumer_id = update_consumer(member)
         else:
             consumer_id = create_consumer(member)
+            if member.pk:
+                # the member had already been logged in by the join form - do the same via Neo
+                consumer_id = api.authenticate(member.username, member.raw_password)
         member.consumer_id = consumer_id
     member.need_to_clean_member = False
 
