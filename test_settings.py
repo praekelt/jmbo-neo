@@ -30,6 +30,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'neo.middleware.NeoMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',     
     'django.middleware.transaction.TransactionMiddleware',
 )
@@ -79,12 +80,13 @@ INSTALLED_APPS = [
     'neo',
     'compressor',
 ]
-#'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
+
 NEO = {
     'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
-    'APP_ID': '35001',
+    'APP_ID': '45001',
     'VERSION_ID': '1.3',
     'PROMO_CODE': 'testPromo',
+    'PASSWORD': 'EHSEHSSMIRGBEN@45001_04032013',
     'BRAND_ID': 12,
     'VERIFY_CERT': False,
     'USE_MCAL': True,

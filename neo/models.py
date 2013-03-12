@@ -7,6 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import signals, Q
 from django.dispatch import receiver
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
 
@@ -63,7 +64,10 @@ def neo_login(sender, **kwargs):
         # Authenticate via Neo in addition to Django
         consumer_id = api.authenticate(user.username, user.raw_password)
     except NeoProfile.DoesNotExist:
-        user.save()
+        try:
+            user.save()
+        except (ValidationError, e):
+            warnings.warn("Consumer could not be created via Neo - %s" % str(e))
     except AttributeError:
         warnings.warn("User was not logged in via Neo - raw password not available")
 
@@ -181,7 +185,7 @@ def update_consumer(member):
 def clean_member(member):
     super(Member, member).full_clean(called_from_child=True)
     # only create/update consumer if the member is complete
-    if member.is_profile_complete:
+    if member.is_profile_complete and hasattr(member, 'raw_password'):
         # attempt to store the data on Neo in order to validate it
         try:
             has_neoprofile = bool(member.neoprofile)
