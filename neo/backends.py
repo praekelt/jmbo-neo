@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 
 from foundry.backends import MultiBackend
 from foundry.models import Member
+from social_auth.backends.facebook import FacebookBackend
 
 from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
 from neo import api
@@ -9,10 +10,10 @@ from neo.api import authenticate as authenticate_neo
 from neo.utils import ConsumerWrapper
 
 
-class NeoBackend(MultiBackend):
+class NeoBackendBase(object):
     
     def authenticate(self, username=None, password=None):
-        user = super(NeoBackend, self).authenticate(username=username, password=password)
+        user = super(NeoBackendBase, self).authenticate(username=username, password=password)
         if user is None:
             # try to log in via Neo
             consumer_id = authenticate_neo(username, password)
@@ -32,3 +33,7 @@ class NeoBackend(MultiBackend):
         else:
             user.raw_password = password
         return user
+
+
+class NeoMultiBackend(NeoBackendBase, MultiBackend):
+    pass

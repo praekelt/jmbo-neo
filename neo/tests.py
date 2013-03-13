@@ -172,7 +172,7 @@ class NeoTestCase(TestCase):
 
     def test_authentication(self):
         member = self.create_member()
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
         Session.objects.all().delete()
         settings.AUTHENTICATION_BACKENDS = ('foundry.backends.MultiBackend', )
@@ -183,7 +183,7 @@ class NeoTestCase(TestCase):
     def test_auto_create_member_from_consumer(self):
         member = self.create_member()
         Member.objects.filter(username=member.username).delete()
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(Member.objects.filter(username=member.username).exists())
 
@@ -231,7 +231,7 @@ class NeoTestCase(TestCase):
         cursor.execute("INSERT INTO foundry_member %s VALUES %s" % (columns_member, values_member))
         transaction.commit_unless_managed()
         member = Member.objects.get(pk=pk)
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(NeoProfile.objects.filter(user=member).exists())
 
@@ -243,7 +243,7 @@ class NeoTestCase(TestCase):
 	relative_path = re.sub(r'https?://\w+', '', response['Location'])
 	self.assertEqual(relative_path, reverse('password_change_done'))
         self.client.logout()
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='new_password'))
 
     def test_generate_forgot_password_token(self):
@@ -266,7 +266,7 @@ class NeoTestCase(TestCase):
         self.assertTrue(token_generator.check_token(member, token))
         member.set_password('new_password')
         member.save()
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend', )
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='new_password'))
 
     def test_member_create_on_complete(self):

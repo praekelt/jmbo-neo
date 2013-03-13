@@ -44,7 +44,6 @@ ADDRESS_FIELDS = frozenset(('city', 'country', 'province', 'zipcode', 'address')
 # These fields correspond to the available login fields in jmbo-foundry
 JMBO_REQUIRED_FIELDS = frozenset(('username', 'mobile_number', 'email'))
 
-USE_AUTH = ('neo.backends.NeoBackend' in getattr(settings, 'AUTHENTICATION_BACKENDS', []))
 USE_MCAL = settings.NEO.get('USE_MCAL', False)
                     
 
@@ -71,9 +70,8 @@ def neo_login(sender, **kwargs):
     except AttributeError:
         warnings.warn("User was not logged in via Neo - raw password not available")
 
-if USE_AUTH:
-    user_logged_in.connect(neo_login)
-    user_logged_out.connect(notify_logout)
+user_logged_in.connect(neo_login)
+user_logged_out.connect(notify_logout)
 
 
 def stash_neo_fields(member, clear=False):
