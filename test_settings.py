@@ -20,8 +20,7 @@ CACHES = {
 }
 
 AUTHENTICATION_BACKENDS = (
-    'neo.backends.NeoBackend',
-    'foundry.backends.MultiBackend',
+    'neo.backends.NeoMultiBackend',
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -83,11 +82,11 @@ INSTALLED_APPS = [
 
 NEO = {
     'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
-    'APP_ID': '45001',
+    'APP_ID': '',
     'VERSION_ID': '1.3',
-    'PROMO_CODE': 'testPromo',
-    'PASSWORD': 'EHSEHSSMIRGBEN@45001_04032013',
-    'BRAND_ID': 12,
+    'PROMO_CODE': '',
+    'PASSWORD': '',
+    'BRAND_ID': 0,
     'VERIFY_CERT': False,
     'USE_MCAL': True,
 }

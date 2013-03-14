@@ -288,7 +288,8 @@ class ConsumerWrapper(object):
             ))
     
     def set_gender(self, gendr, mod_flag=modify_flag['INSERT']):
-        self._get_or_create_profile().Gender = gender['MALE'] if gendr == 'M' else gender['FEMALE']
+        if gendr:
+            self._get_or_create_profile().Gender = gender['MALE'] if gendr == 'M' else gender['FEMALE']
 
     def set_email(self, email, mod_flag=modify_flag['INSERT']):
         if email:
