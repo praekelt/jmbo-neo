@@ -15,6 +15,7 @@ from jmbo.models import ModelBase
 from preferences import preferences
 from foundry.models import Member, Country, DefaultAvatar
 from foundry.forms import PasswordResetForm
+from social_auth.db.django_models import UserSocialAuth
 
 from neo import api
 from neo.utils import ConsumerWrapper
@@ -58,7 +59,15 @@ def notify_logout(sender, **kwargs):
 def neo_login(sender, **kwargs):
     try:
         user = kwargs['user']
-        kwargs['request'].session['raw_password'] = user.raw_password
+        if user.has_usable_password():  # for normal members
+            kwargs['request'].session['raw_password'] = user.raw_password
+        else:  # members signed up via Facebook/other
+            social = user.social_auth.all()[:1]
+            if social:
+                kwargs['request'].session['raw_password'] = social[0].uid
+                user.raw_password = social[0].uid
+            else:
+                raise UserSocialAuth.DoesNotExist 
         neo_profile = user.neoprofile
         # Authenticate via Neo in addition to Django
         consumer_id = api.authenticate(user.username, user.raw_password)
@@ -69,6 +78,8 @@ def neo_login(sender, **kwargs):
             warnings.warn("Consumer could not be created via Neo - %s" % str(e))
     except AttributeError:
         warnings.warn("User was not logged in via Neo - raw password not available")
+    except UserSocialAuth:
+        warnings.warn("User was not logged in via Neo - the user does not have a usable password or social authentication id.")
 
 user_logged_in.connect(neo_login)
 user_logged_out.connect(notify_logout)
