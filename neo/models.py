@@ -3,23 +3,19 @@ import warnings
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_out, user_logged_in
-from django.contrib.contenttypes.models import ContentType
-from django.db.models import signals, Q
-from django.dispatch import receiver
+from django.db.models import signals
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
 
-from jmbo.models import ModelBase
 from preferences import preferences
-from foundry.models import Member, Country, DefaultAvatar
-from foundry.forms import PasswordResetForm
+from foundry.models import Member, DefaultAvatar
 from social_auth.db.django_models import UserSocialAuth
 
 from neo import api
 from neo.utils import ConsumerWrapper
-from neo.constants import modify_flag, country_option_id
+from neo.constants import modify_flag
 
 
 class NeoProfile(models.Model):
@@ -34,10 +30,10 @@ NB. These attributes must be required during registration for any Neo app
 NB. Password is a special case and is handled separately
 NB. Address, city and province are also special cases
 '''
-NEO_ATTR = frozenset(('username', 'first_name', \
-    'last_name', 'dob', 'email', 'mobile_number', \
-    'receive_sms', 'receive_email', 'country', \
-    'gender'))
+NEO_ATTR = frozenset((
+    'username', 'first_name', 'last_name', 'dob',
+    'email', 'mobile_number', 'receive_sms',
+    'receive_email', 'country', 'gender'))
 
 # These fields are used together to create an address and don't exist as individual neo attributes
 ADDRESS_FIELDS = frozenset(('city', 'country', 'province', 'zipcode', 'address'))
@@ -46,15 +42,15 @@ ADDRESS_FIELDS = frozenset(('city', 'country', 'province', 'zipcode', 'address')
 JMBO_REQUIRED_FIELDS = frozenset(('username', 'mobile_number', 'email'))
 
 USE_MCAL = settings.NEO.get('USE_MCAL', False)
-                    
+
 
 def notify_logout(sender, **kwargs):
     try:
         neo_profile = kwargs['user'].neoprofile
         api.logout(neo_profile.consumer_id)
     except NeoProfile.DoesNotExist:
-        pass # figure out something to do here
-        
+        pass  # figure out something to do here
+
 
 def neo_login(sender, **kwargs):
     try:
@@ -67,14 +63,15 @@ def neo_login(sender, **kwargs):
                 kwargs['request'].session['raw_password'] = social[0].uid
                 user.raw_password = social[0].uid
             else:
-                raise UserSocialAuth.DoesNotExist 
-        neo_profile = user.neoprofile
+                raise UserSocialAuth.DoesNotExist
+        # check that neo profile exists - throws DoesNotExist if there is no profile
+        user.neoprofile
         # Authenticate via Neo in addition to Django
-        consumer_id = api.authenticate(user.username, user.raw_password)
+        api.authenticate(user.username, user.raw_password)
     except NeoProfile.DoesNotExist:
         try:
             user.save()
-        except (ValidationError, e):
+        except ValidationError, e:
             warnings.warn("Consumer could not be created via Neo - %s" % str(e))
     except AttributeError:
         warnings.warn("User was not logged in via Neo - raw password not available")
@@ -128,7 +125,7 @@ def create_consumer(member):
     consumer_id, uri = api.create_consumer(wrapper.consumer)
     api.complete_registration(consumer_id)  # activates the account
     return consumer_id
- 
+
 
 def update_consumer(member):
     consumer_id = member.neoprofile.consumer_id
@@ -211,11 +208,11 @@ def clean_member(member):
         member.consumer_id = consumer_id
     member.need_to_clean_member = False
 
-    
-'''
-NB: Keep this in sync with changes to foundry.models.Member
-'''
+
 def save_member(member, *args, **kwargs):
+    '''
+    NB: Keep this in sync with changes to foundry.models.Member
+    '''
     # START - copied from foundry
     member.is_profile_complete = True
     required_fields = preferences.RegistrationPreferences.required_fields
@@ -224,7 +221,7 @@ def save_member(member, *args, **kwargs):
             member.is_profile_complete = False
             break
     # END
-    
+
     if getattr(member, 'need_to_clean_member', True):
         member.full_clean()
         member.need_to_clean_member = True
@@ -236,7 +233,7 @@ def save_member(member, *args, **kwargs):
         stashed_fields = stash_neo_fields(member, clear=clear_fields)
 
     super(Member, member).save(*args, **kwargs)
-    
+
     if stash_fields:
         if clear_fields:
             for key, val in stashed_fields.iteritems():
@@ -303,7 +300,7 @@ def load_consumer(sender, *args, **kwargs):
                     consumer = api.get_consumer(consumer_id)
                     wrapper = ConsumerWrapper(consumer=consumer)
                     member = dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
-                    member.update(wrapper.address) # special case
+                    member.update(wrapper.address)  # special case
                     # update instance with Neo attributes
                     for key, val in member.iteritems():
                         setattr(instance, key, val)
@@ -316,11 +313,11 @@ def load_consumer(sender, *args, **kwargs):
 signals.post_init.connect(load_consumer, sender=Member)
 
 
-'''
-Store the clear text password on a user, thus making
-it accessible by Neo.
-'''
 def set_password(user, raw_password, old_password=None):
+    '''
+    Store the clear text password on a user, thus making
+    it accessible by Neo.
+    '''
     try:
         if user.neoprofile and old_password:
             user.old_password = old_password

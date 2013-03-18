@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'foundry',
     'neo',
     'compressor',
+    'social_auth',
 ]
 
 NEO = {
