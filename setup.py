@@ -11,14 +11,15 @@ setup(
     url='http://github.com/praekelt/jmbo-neo',
     packages = find_packages(),
     install_requires = [
-	    'jmbo-foundry==1.1.15',
+        'jmbo-foundry==1.1.15',
         'django-ckeditor',
-        'requests',
+        # jmbo-neo depends on requests.defaults, which requests 1.0.0 removes.
+        'requests<1',
         'lxml',
         'django>=1.4,<1.5',
     ],
     tests_require=[
-	    'django-setuptest',
+        'django-setuptest',
         'python-memcached',
     ],
     test_suite="setuptest.setuptest.SetupTestSuite",
