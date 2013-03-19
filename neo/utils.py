@@ -264,28 +264,29 @@ class ConsumerWrapper(object):
         self._get_or_create_account().LoginCredentials.Password = password
     
     def set_address(self, address_line, city, state, zipcode, country, mod_flag=modify_flag['INSERT']):
-        profile = self._get_or_create_profile()
-        updated = False
-        for a in profile.Address:
-            if a.AddressType == address_type['HOME']:
-                a.Address1 = address_line
-                a.City = city
-                a.StateOther = state
-                a.ZipCode = zipcode
-                a.Country = country.country_code
-                a.ModifyFlag = mod_flag
-                updated = True
-                break
-        if not updated:
-            profile.add_Address(AddressDetailsType(
-                AddressType = address_type['HOME'],
-                Address1 = address_line,
-                City = city,
-                StateOther = state,
-                ZipCode = zipcode,
-                Country = country.country_code,
-                ModifyFlag = mod_flag,
-            ))
+        if address_line and city and state and zipcode and country:
+            profile = self._get_or_create_profile()
+            updated = False
+            for a in profile.Address:
+                if a.AddressType == address_type['HOME']:
+                    a.Address1 = address_line
+                    a.City = city
+                    a.StateOther = state
+                    a.ZipCode = zipcode
+                    a.Country = country.country_code
+                    a.ModifyFlag = mod_flag
+                    updated = True
+                    break
+            if not updated:
+                profile.add_Address(AddressDetailsType(
+                    AddressType = address_type['HOME'],
+                    Address1 = address_line,
+                    City = city,
+                    StateOther = state,
+                    ZipCode = zipcode,
+                    Country = country.country_code,
+                    ModifyFlag = mod_flag,
+                ))
     
     def set_gender(self, gendr, mod_flag=modify_flag['INSERT']):
         if gendr:
