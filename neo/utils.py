@@ -264,15 +264,15 @@ class ConsumerWrapper(object):
         self._get_or_create_account().LoginCredentials.Password = password
     
     def set_address(self, address_line, city, state, zipcode, country, mod_flag=modify_flag['INSERT']):
-        if address_line and city and state and zipcode and country:
+        if country:  # must at least have a country
             profile = self._get_or_create_profile()
             updated = False
             for a in profile.Address:
                 if a.AddressType == address_type['HOME']:
-                    a.Address1 = address_line
-                    a.City = city
-                    a.StateOther = state
-                    a.ZipCode = zipcode
+                    a.Address1 = address_line if address_line else '0'
+                    a.City = city if city else '0'
+                    a.StateOther = state if state else '0'
+                    a.ZipCode = zipcode if zipcode else '0'
                     a.Country = country.country_code
                     a.ModifyFlag = mod_flag
                     updated = True
@@ -280,10 +280,10 @@ class ConsumerWrapper(object):
             if not updated:
                 profile.add_Address(AddressDetailsType(
                     AddressType = address_type['HOME'],
-                    Address1 = address_line,
-                    City = city,
-                    StateOther = state,
-                    ZipCode = zipcode,
+                    Address1 = address_line if address_line else '0',
+                    City = city if city else '0',
+                    StateOther = state if state else '0',
+                    ZipCode = zipcode if zipcode else '0',
                     Country = country.country_code,
                     ModifyFlag = mod_flag,
                 ))
