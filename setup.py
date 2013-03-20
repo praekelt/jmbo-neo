@@ -24,7 +24,6 @@ setup(
     ],
     tests_require=[
         'django-setuptest',
-        'python-memcached',
     ],
     test_suite="setuptest.setuptest.SetupTestSuite",
     include_package_data=True,
