@@ -1,4 +1,7 @@
 import warnings
+from StringIO import StringIO
+
+from lxml import etree
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -333,6 +336,27 @@ def set_password(user, raw_password, old_password=None):
         pass
     user.raw_password = raw_password
     user.password = make_password(raw_password)
+
+
+def dataloadtool_export(output, members, pretty_print=False):
+    """
+    Export the given members as XML input for the CIDB Data Load Tool.
+
+    :param output: File-like object to write to.
+    """
+    def etree_from_gds(gds):
+        sio = StringIO()
+        gds.export(sio, 0, pretty_print=False)
+        return etree.fromstring(sio.getvalue())
+
+    output.write('<Consumers>\n')
+    for (i, member) in enumerate(members):
+        wrapper = wrap_member(member)
+        elem = etree_from_gds(wrapper.consumer)
+        elem.attrib['recordNumber'] = str(i)
+        output.write(etree.tostring(elem, pretty_print=pretty_print))
+        output.write('\n')
+    output.write('</Consumers>\n')
 
 
 '''

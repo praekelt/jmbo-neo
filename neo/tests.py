@@ -1,7 +1,10 @@
 import os.path
 import re
 import time
+from StringIO import StringIO
 from datetime import timedelta, date, datetime
+
+from lxml import etree, objectify
 
 from django.test import TestCase
 from django.test.client import Client
@@ -22,10 +25,10 @@ from django.db import connection, transaction
 from foundry.models import Member, Country, RegistrationPreferences
 from competition.models import Competition
 
-from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
+from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS, dataloadtool_export
 from neo.forms import NeoTokenGenerator
-from neo import api
-from neo.utils import ConsumerWrapper
+from neo import api, constants
+from neo.utils import BRAND_ID, PROMO_CODE, ConsumerWrapper, dataloadtool_schema
 
 
 class _MemberTestCase(object):
@@ -283,3 +286,101 @@ class NeoTestCase(_MemberTestCase, TestCase):
         member.gender = 'F'
         member.save()
         self.assertTrue(NeoProfile.objects.filter(user=member).exists())
+
+
+class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
+    """
+    Exporting to the Data Load Tool.
+    """
+
+    def setUp(self):
+        super(DataLoadToolExportTestCase, self).setUp()
+        self.maxDiff = None  # For XML document diffs.
+        self.consumers_schema = dataloadtool_schema('Consumers.xsd')
+        self.parser = objectify.makeparser(schema=self.consumers_schema)
+
+    def assertValidates(self, xml):
+        """
+        The given XML string should be a valid Consumers.xsd document.
+
+        :return: The parsed tree.
+        """
+        tree = etree.fromstring(xml)
+        self.assertTrue(
+            self.consumers_schema.validate(tree),
+            'Validation failed: {0}'.format(self.consumers_schema.error_log.last_error)
+        )
+
+    def expected_consumer(self, member, **kwargs):
+        """
+        Return an expected Consumer record for the current test data.
+
+        :param member: Member instance to take variable fields from.
+        :param kwargs: Additional attributes for the Consumer element.
+        :rtype: `objectify` tree
+        """
+        E = objectify.ElementMaker(annotate=False)
+        genderkey = {'F': 'FEMALE', 'M': 'MALE'}[member.gender]
+        consumerprofile = E.ConsumerProfile(
+            E.Title(''),
+            E.FirstName(member.first_name), E.LastName(member.last_name),
+            E.DOB(member.dob.strftime('%Y-%m-%d')),
+            E.Gender(constants.gender[genderkey]),
+            E.Address(E.Address1(member.address), E.City(member.city), E.Country(member.country.country_code), E.ZipCode(member.zipcode), E.AddressType(constants.address_type['HOME']), E.StateOther('province'), E.ModifyFlag(constants.modify_flag['INSERT'])),
+            E.Phone(E.PhoneNumber(member.mobile_number), E.PhoneType(constants.phone_type['MOBILE']), E.ModifyFlag(constants.modify_flag['INSERT'])),
+            E.PromoCode(PROMO_CODE),
+            E.Email(E.EmailId(member.mobile_number), E.EmailCategory(constants.email_category['MOBILE_NO']), E.IsDefaultFlag(1), E.ModifyFlag(constants.modify_flag['INSERT'])),
+            E.Email(E.EmailId(member.email), E.EmailCategory(constants.email_category['PERSONAL']), E.IsDefaultFlag(0), E.ModifyFlag(constants.modify_flag['INSERT'])),
+        )
+        preferences = E.Preferences(
+            E.QuestionCategory(
+                E.CategoryID(constants.question_category['GENERAL']),
+                E.QuestionAnswers(
+                    E.QuestionID(92),
+                    E.Answer(E.OptionID(222), E.ModifyFlag(constants.modify_flag['INSERT'])),
+                ),
+            ),
+            E.QuestionCategory(
+                E.CategoryID(constants.question_category['OPTIN']),
+                E.QuestionAnswers(
+                    E.QuestionID(64),
+                    E.Answer(E.OptionID(2), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['EMAIL'])),
+                    E.Answer(E.OptionID(2), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['SMS'])),
+                ),
+            ),
+        )
+        useraccount = E.UserAccount(
+            E.LoginCredentials(E.LoginName(member.username), E.Password('password')),
+        )
+        return E.Consumer(consumerprofile, preferences, useraccount, **kwargs)
+
+    def expected_consumers(self, members):
+        """
+        Return an expected Consumers structure for the given members.
+
+        :rtype: `objectify` tree
+        """
+        E = objectify.ElementMaker(annotate=False)
+        # The Consumer records must be uniquely numbered to be valid: test that
+        # we're numbering them sequentially.
+        _consumers = [self.expected_consumer(member, recordNumber=str(i))
+                      for (i, member) in enumerate(members)]
+        return E.Consumers(*_consumers)
+
+    def test_dataloadtool_export(self):
+        """
+        Validate `dataloadtool_export()` against the schema and expected data.
+        """
+        members = [self.create_member_partial(commit=False), self.create_member_partial(commit=False)]
+        members[0].gender = 'F'
+        members[1].gender = 'M'
+
+        sio = StringIO()
+        dataloadtool_export(sio, members)
+        xml = sio.getvalue()
+        self.assertValidates(xml)
+
+        consumers = objectify.fromstring(xml, self.parser)
+        self.assertEqual(
+            objectify.dump(self.expected_consumers(members)),
+            objectify.dump(consumers))
