@@ -106,7 +106,10 @@ def stash_neo_fields(member, clear=False):
     return stashed_fields
 
 
-def create_consumer(member):
+def wrap_member(member):
+    """
+    Return a `ConsumerWrapper` reflecting the given `Member`.
+    """
     wrapper = ConsumerWrapper()
     for a in NEO_ATTR:
         getattr(wrapper, "set_%s" % a)(getattr(member, a))
@@ -122,6 +125,11 @@ def create_consumer(member):
         wrapper.set_address(member.address, member.city,
             member.province, member.zipcode, member.country)
 
+    return wrapper
+
+
+def create_consumer(member):
+    wrapper = wrap_member(member)
     consumer_id, uri = api.create_consumer(wrapper.consumer)
     api.complete_registration(consumer_id)  # activates the account
     return consumer_id
