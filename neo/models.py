@@ -116,7 +116,10 @@ def wrap_member(member):
     wrapper = ConsumerWrapper()
     for a in NEO_ATTR:
         getattr(wrapper, "set_%s" % a)(getattr(member, a))
-    wrapper.set_password(member.raw_password)
+    # A raw_password is not always set (for example, when exporting members
+    # from the command line).
+    if getattr(member, 'raw_password', None):
+        wrapper.set_password(member.raw_password)
 
     # assign address
     has_address = False
