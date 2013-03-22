@@ -52,14 +52,14 @@ class NeoTestCase(TestCase):
         store = engine.SessionStore()
         store.save()
         self.session = store
-        required_fields_str = ','.join(['first_name', 'last_name', 'dob', \
-            'email', 'mobile_number', 'country', 'gender', 'city', 'country', \
+        required_fields_str = ','.join(['first_name', 'last_name', 'dob',
+            'email', 'mobile_number', 'country', 'gender', 'city', 'country',
             'province', 'zipcode', 'address'])
         cursor = connection.cursor()
         cursor.execute("DELETE FROM preferences_registrationpreferences")
         cursor.execute("INSERT INTO preferences_preferences (id) VALUES (1)")
-        cursor.execute("""INSERT INTO preferences_registrationpreferences (preferences_ptr_id, 
-            raw_required_fields, raw_display_fields, raw_unique_fields, raw_field_order) VALUES (1, %s, '', '', '{}')""", \
+        cursor.execute("""INSERT INTO preferences_registrationpreferences (preferences_ptr_id,
+            raw_required_fields, raw_display_fields, raw_unique_fields, raw_field_order) VALUES (1, %s, '', '', '{}')""",
             [required_fields_str])
         cursor.execute("INSERT INTO preferences_preferences_sites (preferences_id, site_id) VALUES (1, 1)")
         transaction.commit_unless_managed()
@@ -94,16 +94,16 @@ class NeoTestCase(TestCase):
     def test_create_member(self):
         member = self.create_member()
         self.assertEqual(NeoProfile.objects.filter(user=member.id).count(), 1)
-    
+
     def test_get_member(self):
         member1 = self.create_member()
         # clear the cached attributes of the newly created member
-        cache.clear();
+        cache.clear()
         # retrieve the member from db + Neo
         member2 = Member.objects.all()[0]
         for key in NEO_ATTR.union(ADDRESS_FIELDS):
             self.assertEqual(getattr(member1, key), getattr(member2, key))
-    
+
     def test_update_member(self):
         member = self.create_member()
         new_dob = timezone.now().date() - timedelta(days=24 * 365)
@@ -138,7 +138,7 @@ class NeoTestCase(TestCase):
                         self.assertEqual(getattr(member, k), v)
                 else:
                     self.assertEqual(getattr(member, field), new_attr)
-                
+
         else:
             cache.clear()
             # retrieve the member from db + Neo
@@ -179,7 +179,7 @@ class NeoTestCase(TestCase):
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(self.login_basic(member))
         self.client.logout()
-    
+
     def test_auto_create_member_from_consumer(self):
         member = self.create_member()
         Member.objects.filter(username=member.username).delete()
@@ -237,11 +237,11 @@ class NeoTestCase(TestCase):
 
     def test_password_change(self):
         member = self.create_member()
-	self.login_basic(member)
+        self.login_basic(member)
         response = self.client.post(reverse('password_change'), {'old_password': 'password',
             'new_password1': 'new_password', 'new_password2': 'new_password'})
-	relative_path = re.sub(r'https?://\w+', '', response['Location'])
-	self.assertEqual(relative_path, reverse('password_change_done'))
+        relative_path = re.sub(r'https?://\w+', '', response['Location'])
+        self.assertEqual(relative_path, reverse('password_change_done'))
         self.client.logout()
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='new_password'))
@@ -255,7 +255,7 @@ class NeoTestCase(TestCase):
         member = self.create_member()
         self.login_basic(member)
         response = self.client.post(reverse('password_reset'), {'email': member.email})
-	relative_path = re.sub(r'https?://\w+', '', response['Location'])
+        relative_path = re.sub(r'https?://\w+', '', response['Location'])
         self.assertEqual(relative_path, reverse('password_reset_done'))
 
     def test_password_reset_confirm(self):
