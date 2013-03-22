@@ -1,6 +1,8 @@
+import pkgutil
 from datetime import date, datetime
 
 from django.conf import settings
+from lxml import etree
 
 from foundry.models import Country
 
@@ -332,3 +334,45 @@ class ConsumerWrapper(object):
                         email.EmailId = email
                         email.ModifyFlag = mod_flag
                         break
+
+
+class PythonPackageResolver(etree.Resolver):
+    """
+    Resolve paths to :pep:`302` package data.
+
+    See http://lxml.de/resolvers.html for context.
+
+    :ivar str package: Python package name.
+
+    :ivar str resource_prefix:
+        Optional prefix to prepend to paths, before looking them up as
+        resources.
+    """
+
+    def __init__(self, package, resource_prefix=''):
+        self.package = package
+        self.resource_prefix = resource_prefix
+
+    def resolve(self, system_url, public_id, context):
+        """
+        Load `system_url` relative to our `resource_prefix`.
+        """
+        s = pkgutil.get_data(self.package, self.resource_prefix + system_url)
+        return None if s is None else self.resolve_string(s, context)
+
+
+#: lxml.etree XMLParser instance that resolves NEO CIDB Data Load Tool schemas.
+dataloadtool_schema_parser = etree.XMLParser()
+dataloadtool_schema_parser.resolvers.add(PythonPackageResolver('neo', 'schemas/dataloadtool/'))
+
+
+def dataloadtool_schema(name):
+    """
+    Load and return a NEO CIDB Data Load Tool XML schema.
+
+    :param str name: Schema name, such as "Consumers.xsd".
+    :rtype: etree.XMLSchema
+    """
+    doc = etree.parse(name, dataloadtool_schema_parser)
+    schema = etree.XMLSchema(doc)
+    return schema
