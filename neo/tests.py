@@ -28,7 +28,10 @@ from neo import api
 from neo.utils import ConsumerWrapper
 
 
-class NeoTestCase(TestCase):
+class _MemberTestCase(object):
+    """
+    Test helper for member creation.
+    """
 
     def setUp(self):
         country = Country.objects.create(
@@ -85,6 +88,9 @@ class NeoTestCase(TestCase):
         member.gender = 'F'
         member.save()
         return member
+
+
+class NeoTestCase(_MemberTestCase, TestCase):
 
     def login_basic(self, member):
         Session.objects.all().delete()
