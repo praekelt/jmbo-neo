@@ -1,5 +1,6 @@
 import warnings
 from StringIO import StringIO
+from contextlib import contextmanager
 
 from lxml import etree
 
@@ -16,6 +17,7 @@ from preferences import preferences
 from foundry.models import Member, DefaultAvatar
 from social_auth.db.django_models import UserSocialAuth
 
+import neo.xml
 from neo import api
 from neo.utils import ConsumerWrapper
 from neo.constants import modify_flag
@@ -339,6 +341,19 @@ def set_password(user, raw_password, old_password=None):
         pass
     user.raw_password = raw_password
     user.password = make_password(raw_password)
+
+
+@contextmanager
+def _neo_xml_ExternalEncoding(encoding):
+    """
+    XXX: Context manager to temporarily set `neo.xml.ExternalEncoding` to the given value.
+
+    This is terrible.
+    """
+    saved = neo.xml.ExternalEncoding
+    neo.xml.ExternalEncoding = encoding
+    yield
+    neo.xml.ExternalEncoding = saved
 
 
 def dataloadtool_export(output, members, pretty_print=False):
