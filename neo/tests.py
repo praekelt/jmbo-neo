@@ -1,3 +1,4 @@
+# encoding: utf-8
 import os.path
 import re
 import time
@@ -383,4 +384,22 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         consumers = objectify.fromstring(xml, self.parser)
         self.assertEqual(
             objectify.dump(self.expected_consumers(members)),
+            objectify.dump(consumers))
+
+    def test_dataloadtool_export_unicode(self):
+        """
+        `dataloadtool_export()` should handle non-ASCII data.
+        """
+        member = self.create_member_partial(commit=False)
+        member.gender = 'F'
+        member.first_name = u'fïrstnâmé'
+
+        sio = StringIO()
+        dataloadtool_export(sio, [member])
+        xml = sio.getvalue()
+        self.assertValidates(xml)
+
+        consumers = objectify.fromstring(xml, self.parser)
+        self.assertEqual(
+            objectify.dump(self.expected_consumers([member])),
             objectify.dump(consumers))

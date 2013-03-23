@@ -367,14 +367,15 @@ def dataloadtool_export(output, members, pretty_print=False):
         gds.export(sio, 0, pretty_print=False)
         return etree.fromstring(sio.getvalue())
 
-    output.write('<Consumers>\n')
-    for (i, member) in enumerate(members):
-        wrapper = wrap_member(member)
-        elem = etree_from_gds(wrapper.consumer)
-        elem.attrib['recordNumber'] = str(i)
-        output.write(etree.tostring(elem, pretty_print=pretty_print))
-        output.write('\n')
-    output.write('</Consumers>\n')
+    with _neo_xml_ExternalEncoding('utf-8'):
+        output.write('<Consumers>\n')
+        for (i, member) in enumerate(members):
+            wrapper = wrap_member(member)
+            elem = etree_from_gds(wrapper.consumer)
+            elem.attrib['recordNumber'] = str(i)
+            output.write(etree.tostring(elem, pretty_print=pretty_print))
+            output.write('\n')
+        output.write('</Consumers>\n')
 
 
 '''
