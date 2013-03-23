@@ -361,6 +361,8 @@ def dataloadtool_export(output, members, pretty_print=False):
     Export the given members as XML input for the CIDB Data Load Tool.
 
     :param output: File-like object to write to.
+    :param members: Iterator of members to export. If this is a large queryset,
+        consider using `iterator()` on it, to avoid excessive caching.
     """
     def etree_from_gds(gds):
         sio = StringIO()

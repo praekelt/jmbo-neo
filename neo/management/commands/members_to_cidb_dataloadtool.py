@@ -22,4 +22,9 @@ class Command(NoArgsCommand):
         dataloadtool_export(output, members, pretty_print=pretty_print)
 
     def get_members(self):
-        return Member.objects.all()
+        """
+        Return the members to export.
+        """
+        # Important: The iterator() call prevents memory usage from growing out
+        # of control, when exporting many members. Don't remove it accidentally.
+        return Member.objects.all().iterator()
