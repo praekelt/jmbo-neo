@@ -16,7 +16,7 @@ class Command(NoArgsCommand):
     ]
 
     def handle_noargs(self, filename=None, pretty_print=False, **options):
-        output = sys.stdout if filename is None else open(filename)
+        output = self.stdout if filename is None else open(filename)
         members = self.get_members()
 
         dataloadtool_export(output, members, pretty_print=pretty_print)
