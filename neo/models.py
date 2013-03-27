@@ -343,19 +343,6 @@ def set_password(user, raw_password, old_password=None):
     user.password = make_password(raw_password)
 
 
-@contextmanager
-def _neo_xml_ExternalEncoding(encoding):
-    """
-    XXX: Context manager to temporarily set `neo.xml.ExternalEncoding` to the given value.
-
-    This is terrible.
-    """
-    saved = neo.xml.ExternalEncoding
-    neo.xml.ExternalEncoding = encoding
-    yield
-    neo.xml.ExternalEncoding = saved
-
-
 def dataloadtool_export(output, members, pretty_print=False):
     """
     Export the given members as XML input for the CIDB Data Load Tool.
@@ -369,15 +356,14 @@ def dataloadtool_export(output, members, pretty_print=False):
         gds.export(sio, 0, pretty_print=False)
         return etree.fromstring(sio.getvalue())
 
-    with _neo_xml_ExternalEncoding('utf-8'):
-        output.write('<Consumers>\n')
-        for (i, member) in enumerate(members):
-            wrapper = wrap_member(member)
-            elem = etree_from_gds(wrapper.consumer)
-            elem.attrib['recordNumber'] = str(i)
-            output.write(etree.tostring(elem, pretty_print=pretty_print))
-            output.write('\n')
-        output.write('</Consumers>\n')
+    output.write('<Consumers>\n')
+    for (i, member) in enumerate(members):
+        wrapper = wrap_member(member)
+        elem = etree_from_gds(wrapper.consumer)
+        elem.attrib['recordNumber'] = str(i)
+        output.write(etree.tostring(elem, pretty_print=pretty_print))
+        output.write('\n')
+    output.write('</Consumers>\n')
 
 
 '''
