@@ -10,6 +10,7 @@ from lxml import etree, objectify
 from django.test import TestCase
 from django.test.client import Client
 from django.utils import timezone
+from django.core import management
 from django.core.cache import cache
 from django.conf import settings
 from django.core.urlresolvers import reverse
@@ -403,3 +404,87 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         self.assertEqual(
             objectify.dump(self.expected_consumers([member])),
             objectify.dump(consumers))
+
+
+class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
+    """
+    Tests the `members_to_cidb_dataloadtool` management command.
+    """
+
+    def setUp(self):
+        super(DataLoadToolExportCommandTestCase, self).setUp()
+        self.command = management.load_command_class('neo', 'members_to_cidb_dataloadtool')
+        self.consumers_parser = objectify.makeparser(schema=dataloadtool_schema('Consumers.xsd'))
+
+    def _call_command(self, *args, **kwargs):
+        """
+        Call the command, and return standard output.
+        """
+        sio = StringIO()
+        management.call_command('members_to_cidb_dataloadtool', stdout=sio, *args, **kwargs)
+        return sio.getvalue()
+
+    def _call_command_validated(self, *args, **kwargs):
+        """
+        Like `_call_command()`, but parse the result into a validated `objectify` tree.
+        """
+        xml = self._call_command(*args, **kwargs)
+        consumers = objectify.fromstring(xml, self.consumers_parser)
+        return consumers
+
+    def create_member_named(self, first_name, with_neoprofile=True):
+        """
+        Create a test member with the given first name.
+
+        :param bool with_neoprofile:
+            Whether the member should have an associated `NeoProfile`.
+        """
+        m = self.create_member_partial(commit=False)
+        m.gender = 'F'
+        m.first_name = first_name
+        m.save()
+        # XXX: This is a bit of a hack, but the best we can do for now.
+        if with_neoprofile:
+            assert NeoProfile.objects.filter(user=m).exists()  # sanity check
+        else:
+            m.neoprofile.delete()
+
+    def test_nomembers(self):
+        """
+        The command should at least run, and produce an empty list of records.
+        """
+        xml = self._call_command()  # zero Consumer records won't validate
+        self.assertEqual(
+            objectify.dump(objectify.fromstring(xml)),
+            objectify.dump(objectify.E.Consumers()))
+
+    def test_members(self):
+        """
+        Test with plain members.
+        """
+        self.create_member_named('foo', with_neoprofile=False)
+        self.create_member_named('bar', with_neoprofile=False)
+        self.create_member_named('baz', with_neoprofile=False)
+
+        consumers = self._call_command_validated()
+        self.assertEqual(
+            set(c.ConsumerProfile.FirstName for c in consumers.Consumer),
+            set(['foo', 'bar', 'baz']))
+
+    def test_neoprofile_members(self):
+        """
+        Members with existing `NeoProfile`s should be excluded, unless "--all" is given.
+        """
+        self.create_member_named('foo', with_neoprofile=False)
+        self.create_member_named('bar', with_neoprofile=False)
+        self.create_member_named('NEO member', with_neoprofile=True)
+
+        consumers = self._call_command_validated()
+        self.assertEqual(
+            set(c.ConsumerProfile.FirstName for c in consumers.Consumer),
+            set(['foo', 'bar']))
+
+        consumers = self._call_command_validated(all=True)
+        self.assertEqual(
+            set(c.ConsumerProfile.FirstName for c in consumers.Consumer),
+            set(['foo', 'bar', 'NEO member']))
