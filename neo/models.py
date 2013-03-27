@@ -1,4 +1,8 @@
 import warnings
+from StringIO import StringIO
+from contextlib import contextmanager
+
+from lxml import etree
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -13,6 +17,7 @@ from preferences import preferences
 from foundry.models import Member, DefaultAvatar
 from social_auth.db.django_models import UserSocialAuth
 
+import neo.xml
 from neo import api
 from neo.utils import ConsumerWrapper
 from neo.constants import modify_flag
@@ -106,11 +111,17 @@ def stash_neo_fields(member, clear=False):
     return stashed_fields
 
 
-def create_consumer(member):
+def wrap_member(member):
+    """
+    Return a `ConsumerWrapper` reflecting the given `Member`.
+    """
     wrapper = ConsumerWrapper()
     for a in NEO_ATTR:
         getattr(wrapper, "set_%s" % a)(getattr(member, a))
-    wrapper.set_password(member.raw_password)
+    # A raw_password is not always set (for example, when exporting members
+    # from the command line).
+    if getattr(member, 'raw_password', None):
+        wrapper.set_password(member.raw_password)
 
     # assign address
     has_address = False
@@ -122,6 +133,11 @@ def create_consumer(member):
         wrapper.set_address(member.address, member.city,
             member.province, member.zipcode, member.country)
 
+    return wrapper
+
+
+def create_consumer(member):
+    wrapper = wrap_member(member)
     consumer_id, uri = api.create_consumer(wrapper.consumer)
     api.complete_registration(consumer_id)  # activates the account
     return consumer_id
@@ -325,6 +341,29 @@ def set_password(user, raw_password, old_password=None):
         pass
     user.raw_password = raw_password
     user.password = make_password(raw_password)
+
+
+def dataloadtool_export(output, members, pretty_print=False):
+    """
+    Export the given members as XML input for the CIDB Data Load Tool.
+
+    :param output: File-like object to write to.
+    :param members: Iterator of members to export. If this is a large queryset,
+        consider using `iterator()` on it, to avoid excessive caching.
+    """
+    def etree_from_gds(gds):
+        sio = StringIO()
+        gds.export(sio, 0, pretty_print=False)
+        return etree.fromstring(sio.getvalue())
+
+    output.write('<Consumers>\n')
+    for (i, member) in enumerate(members):
+        wrapper = wrap_member(member)
+        elem = etree_from_gds(wrapper.consumer)
+        elem.attrib['recordNumber'] = str(i)
+        output.write(etree.tostring(elem, pretty_print=pretty_print))
+        output.write('\n')
+    output.write('</Consumers>\n')
 
 
 '''

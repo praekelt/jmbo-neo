@@ -3,6 +3,8 @@ Changelog
 
 0.3 (18-03-2013)
 ----------------
+#. Add a new management command to export members for bulk upload:
+   ``members_to_cidb_dataloadtool``
 #. Automatically create consumers on CIDB for members on login.
 #. Automatically create members from consumers on CIDB on login.
 #. Consumer creation deferred until a member is complete according to `RegistrationPreferences.required_fields`.

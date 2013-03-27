@@ -1,11 +1,16 @@
+# encoding: utf-8
 import os.path
 import re
 import time
+from StringIO import StringIO
 from datetime import timedelta, date, datetime
+
+from lxml import etree, objectify
 
 from django.test import TestCase
 from django.test.client import Client
 from django.utils import timezone
+from django.core import management
 from django.core.cache import cache
 from django.conf import settings
 from django.core.urlresolvers import reverse
@@ -22,13 +27,16 @@ from django.db import connection, transaction
 from foundry.models import Member, Country, RegistrationPreferences
 from competition.models import Competition
 
-from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS
+from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS, dataloadtool_export
 from neo.forms import NeoTokenGenerator
-from neo import api
-from neo.utils import ConsumerWrapper
+from neo import api, constants
+from neo.utils import BRAND_ID, PROMO_CODE, ConsumerWrapper, dataloadtool_schema
 
 
-class NeoTestCase(TestCase):
+class _MemberTestCase(object):
+    """
+    Test helper for member creation.
+    """
 
     def setUp(self):
         country = Country.objects.create(
@@ -52,14 +60,14 @@ class NeoTestCase(TestCase):
         store = engine.SessionStore()
         store.save()
         self.session = store
-        required_fields_str = ','.join(['first_name', 'last_name', 'dob', \
-            'email', 'mobile_number', 'country', 'gender', 'city', 'country', \
+        required_fields_str = ','.join(['first_name', 'last_name', 'dob',
+            'email', 'mobile_number', 'country', 'gender', 'city', 'country',
             'province', 'zipcode', 'address'])
         cursor = connection.cursor()
         cursor.execute("DELETE FROM preferences_registrationpreferences")
         cursor.execute("INSERT INTO preferences_preferences (id) VALUES (1)")
-        cursor.execute("""INSERT INTO preferences_registrationpreferences (preferences_ptr_id, 
-            raw_required_fields, raw_display_fields, raw_unique_fields, raw_field_order) VALUES (1, %s, '', '', '{}')""", \
+        cursor.execute("""INSERT INTO preferences_registrationpreferences (preferences_ptr_id,
+            raw_required_fields, raw_display_fields, raw_unique_fields, raw_field_order) VALUES (1, %s, '', '', '{}')""",
             [required_fields_str])
         cursor.execute("INSERT INTO preferences_preferences_sites (preferences_id, site_id) VALUES (1, 1)")
         transaction.commit_unless_managed()
@@ -86,6 +94,9 @@ class NeoTestCase(TestCase):
         member.save()
         return member
 
+
+class NeoTestCase(_MemberTestCase, TestCase):
+
     def login_basic(self, member):
         Session.objects.all().delete()
         settings.AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
@@ -94,16 +105,16 @@ class NeoTestCase(TestCase):
     def test_create_member(self):
         member = self.create_member()
         self.assertEqual(NeoProfile.objects.filter(user=member.id).count(), 1)
-    
+
     def test_get_member(self):
         member1 = self.create_member()
         # clear the cached attributes of the newly created member
-        cache.clear();
+        cache.clear()
         # retrieve the member from db + Neo
         member2 = Member.objects.all()[0]
         for key in NEO_ATTR.union(ADDRESS_FIELDS):
             self.assertEqual(getattr(member1, key), getattr(member2, key))
-    
+
     def test_update_member(self):
         member = self.create_member()
         new_dob = timezone.now().date() - timedelta(days=24 * 365)
@@ -138,7 +149,7 @@ class NeoTestCase(TestCase):
                         self.assertEqual(getattr(member, k), v)
                 else:
                     self.assertEqual(getattr(member, field), new_attr)
-                
+
         else:
             cache.clear()
             # retrieve the member from db + Neo
@@ -179,7 +190,7 @@ class NeoTestCase(TestCase):
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(self.login_basic(member))
         self.client.logout()
-    
+
     def test_auto_create_member_from_consumer(self):
         member = self.create_member()
         Member.objects.filter(username=member.username).delete()
@@ -237,11 +248,11 @@ class NeoTestCase(TestCase):
 
     def test_password_change(self):
         member = self.create_member()
-	self.login_basic(member)
+        self.login_basic(member)
         response = self.client.post(reverse('password_change'), {'old_password': 'password',
             'new_password1': 'new_password', 'new_password2': 'new_password'})
-	relative_path = re.sub(r'https?://\w+', '', response['Location'])
-	self.assertEqual(relative_path, reverse('password_change_done'))
+        relative_path = re.sub(r'https?://\w+', '', response['Location'])
+        self.assertEqual(relative_path, reverse('password_change_done'))
         self.client.logout()
         settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='new_password'))
@@ -255,7 +266,7 @@ class NeoTestCase(TestCase):
         member = self.create_member()
         self.login_basic(member)
         response = self.client.post(reverse('password_reset'), {'email': member.email})
-	relative_path = re.sub(r'https?://\w+', '', response['Location'])
+        relative_path = re.sub(r'https?://\w+', '', response['Location'])
         self.assertEqual(relative_path, reverse('password_reset_done'))
 
     def test_password_reset_confirm(self):
@@ -277,3 +288,203 @@ class NeoTestCase(TestCase):
         member.gender = 'F'
         member.save()
         self.assertTrue(NeoProfile.objects.filter(user=member).exists())
+
+
+class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
+    """
+    Exporting to the Data Load Tool.
+    """
+
+    def setUp(self):
+        super(DataLoadToolExportTestCase, self).setUp()
+        self.maxDiff = None  # For XML document diffs.
+        self.consumers_schema = dataloadtool_schema('Consumers.xsd')
+        self.parser = objectify.makeparser(schema=self.consumers_schema)
+
+    def assertValidates(self, xml):
+        """
+        The given XML string should be a valid Consumers.xsd document.
+
+        :return: The parsed tree.
+        """
+        tree = etree.fromstring(xml)
+        self.assertTrue(
+            self.consumers_schema.validate(tree),
+            'Validation failed: {0}'.format(self.consumers_schema.error_log.last_error)
+        )
+
+    def expected_consumer(self, member, **kwargs):
+        """
+        Return an expected Consumer record for the current test data.
+
+        :param member: Member instance to take variable fields from.
+        :param kwargs: Additional attributes for the Consumer element.
+        :rtype: `objectify` tree
+        """
+        E = objectify.ElementMaker(annotate=False)
+        genderkey = {'F': 'FEMALE', 'M': 'MALE'}[member.gender]
+        consumerprofile = E.ConsumerProfile(
+            E.Title(''),
+            E.FirstName(member.first_name), E.LastName(member.last_name),
+            E.DOB(member.dob.strftime('%Y-%m-%d')),
+            E.Gender(constants.gender[genderkey]),
+            E.Address(E.Address1(member.address), E.City(member.city), E.Country(member.country.country_code), E.ZipCode(member.zipcode), E.AddressType(constants.address_type['HOME']), E.StateOther('province'), E.ModifyFlag(constants.modify_flag['INSERT'])),
+            E.Phone(E.PhoneNumber(member.mobile_number), E.PhoneType(constants.phone_type['MOBILE']), E.ModifyFlag(constants.modify_flag['INSERT'])),
+            E.PromoCode(PROMO_CODE),
+            E.Email(E.EmailId(member.mobile_number), E.EmailCategory(constants.email_category['MOBILE_NO']), E.IsDefaultFlag(1), E.ModifyFlag(constants.modify_flag['INSERT'])),
+            E.Email(E.EmailId(member.email), E.EmailCategory(constants.email_category['PERSONAL']), E.IsDefaultFlag(0), E.ModifyFlag(constants.modify_flag['INSERT'])),
+        )
+        preferences = E.Preferences(
+            E.QuestionCategory(
+                E.CategoryID(constants.question_category['GENERAL']),
+                E.QuestionAnswers(
+                    E.QuestionID(92),
+                    E.Answer(E.OptionID(222), E.ModifyFlag(constants.modify_flag['INSERT'])),
+                ),
+            ),
+            E.QuestionCategory(
+                E.CategoryID(constants.question_category['OPTIN']),
+                E.QuestionAnswers(
+                    E.QuestionID(64),
+                    E.Answer(E.OptionID(2), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['EMAIL'])),
+                    E.Answer(E.OptionID(2), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['SMS'])),
+                ),
+            ),
+        )
+        useraccount = E.UserAccount(
+            E.LoginCredentials(E.LoginName(member.username), E.Password('password')),
+        )
+        return E.Consumer(consumerprofile, preferences, useraccount, **kwargs)
+
+    def expected_consumers(self, members):
+        """
+        Return an expected Consumers structure for the given members.
+
+        :rtype: `objectify` tree
+        """
+        E = objectify.ElementMaker(annotate=False)
+        # The Consumer records must be uniquely numbered to be valid: test that
+        # we're numbering them sequentially.
+        _consumers = [self.expected_consumer(member, recordNumber=str(i))
+                      for (i, member) in enumerate(members)]
+        return E.Consumers(*_consumers)
+
+    def test_dataloadtool_export(self):
+        """
+        Validate `dataloadtool_export()` against the schema and expected data.
+        """
+        members = [self.create_member_partial(commit=False), self.create_member_partial(commit=False)]
+        members[0].gender = 'F'
+        members[1].gender = 'M'
+
+        sio = StringIO()
+        dataloadtool_export(sio, members)
+        xml = sio.getvalue()
+        self.assertValidates(xml)
+
+        consumers = objectify.fromstring(xml, self.parser)
+        self.assertEqual(
+            objectify.dump(self.expected_consumers(members)),
+            objectify.dump(consumers))
+
+    def test_dataloadtool_export_unicode(self):
+        """
+        `dataloadtool_export()` should handle non-ASCII data.
+        """
+        member = self.create_member_partial(commit=False)
+        member.gender = 'F'
+        member.first_name = u'fïrstnâmé'
+
+        sio = StringIO()
+        dataloadtool_export(sio, [member])
+        xml = sio.getvalue()
+        self.assertValidates(xml)
+
+        consumers = objectify.fromstring(xml, self.parser)
+        self.assertEqual(
+            objectify.dump(self.expected_consumers([member])),
+            objectify.dump(consumers))
+
+
+class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
+    """
+    Tests the `members_to_cidb_dataloadtool` management command.
+    """
+
+    def setUp(self):
+        super(DataLoadToolExportCommandTestCase, self).setUp()
+        self.command = management.load_command_class('neo', 'members_to_cidb_dataloadtool')
+        self.consumers_parser = objectify.makeparser(schema=dataloadtool_schema('Consumers.xsd'))
+
+    def _call_command(self, *args, **kwargs):
+        """
+        Call the command, and return standard output.
+        """
+        sio = StringIO()
+        management.call_command('members_to_cidb_dataloadtool', stdout=sio, *args, **kwargs)
+        return sio.getvalue()
+
+    def _call_command_validated(self, *args, **kwargs):
+        """
+        Like `_call_command()`, but parse the result into a validated `objectify` tree.
+        """
+        xml = self._call_command(*args, **kwargs)
+        consumers = objectify.fromstring(xml, self.consumers_parser)
+        return consumers
+
+    def create_member_named(self, first_name, with_neoprofile=True):
+        """
+        Create a test member with the given first name.
+
+        :param bool with_neoprofile:
+            Whether the member should have an associated `NeoProfile`.
+        """
+        m = self.create_member_partial(commit=False)
+        m.gender = 'F'
+        m.first_name = first_name
+        m.save()
+        # XXX: This is a bit of a hack, but the best we can do for now.
+        if with_neoprofile:
+            assert NeoProfile.objects.filter(user=m).exists()  # sanity check
+        else:
+            m.neoprofile.delete()
+
+    def test_nomembers(self):
+        """
+        The command should at least run, and produce an empty list of records.
+        """
+        xml = self._call_command()  # zero Consumer records won't validate
+        self.assertEqual(
+            objectify.dump(objectify.fromstring(xml)),
+            objectify.dump(objectify.E.Consumers()))
+
+    def test_members(self):
+        """
+        Test with plain members.
+        """
+        self.create_member_named('foo', with_neoprofile=False)
+        self.create_member_named('bar', with_neoprofile=False)
+        self.create_member_named('baz', with_neoprofile=False)
+
+        consumers = self._call_command_validated()
+        self.assertEqual(
+            set(c.ConsumerProfile.FirstName for c in consumers.Consumer),
+            set(['foo', 'bar', 'baz']))
+
+    def test_neoprofile_members(self):
+        """
+        Members with existing `NeoProfile`s should be excluded, unless "--all" is given.
+        """
+        self.create_member_named('foo', with_neoprofile=False)
+        self.create_member_named('bar', with_neoprofile=False)
+        self.create_member_named('NEO member', with_neoprofile=True)
+
+        consumers = self._call_command_validated()
+        self.assertEqual(
+            set(c.ConsumerProfile.FirstName for c in consumers.Consumer),
+            set(['foo', 'bar']))
+
+        consumers = self._call_command_validated(all=True)
+        self.assertEqual(
+            set(c.ConsumerProfile.FirstName for c in consumers.Consumer),
+            set(['foo', 'bar', 'NEO member']))
