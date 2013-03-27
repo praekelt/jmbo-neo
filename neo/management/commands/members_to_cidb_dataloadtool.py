@@ -1,8 +1,7 @@
-import sys
 from optparse import make_option
 from textwrap import dedent
 
-from django.core.management.base import NoArgsCommand, CommandError
+from django.core.management.base import NoArgsCommand
 
 from neo.models import Member, dataloadtool_export
 
