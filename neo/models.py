@@ -362,6 +362,10 @@ def dataloadtool_export(output, members, password_callback=None, pretty_print=Fa
         would be, the function can explicitly return the member's
         `raw_password`, if it is set.)
     """
+    # XXX: We take advantage of the existing ConsumerWrapper logic to construct
+    # a GeneratedsSuper instance, which we then convert to lxml for further
+    # manipulation. Once ConsumerWrapper (or its replacement) can give us a
+    # lxml tree directly, we can skip this step.
     def etree_from_gds(gds):
         sio = StringIO()
         gds.export(sio, 0, pretty_print=False)
