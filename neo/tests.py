@@ -338,6 +338,20 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
             'Validation failed: {0}'.format(self.consumers_schema.error_log.last_error)
         )
 
+    def _dataloadtool_export(self, *args, **kwargs):
+        """
+        Call `dataloadtool_export()` with the supplied additional arguments.
+
+        :return: Validated Consumers `objectify` tree.
+        """
+        sio = StringIO()
+        dataloadtool_export(sio, *args, **kwargs)
+        xml = sio.getvalue()
+        self.assertValidates(xml)
+
+        consumers = objectify.fromstring(xml, self.parser)
+        return consumers
+
     def expected_consumer(self, member, **kwargs):
         """
         Return an expected Consumer record for the current test data.
@@ -402,12 +416,7 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         members[0].gender = 'F'
         members[1].gender = 'M'
 
-        sio = StringIO()
-        dataloadtool_export(sio, members)
-        xml = sio.getvalue()
-        self.assertValidates(xml)
-
-        consumers = objectify.fromstring(xml, self.parser)
+        consumers = self._dataloadtool_export(members)
         self.assertEqual(
             objectify.dump(self.expected_consumers(members)),
             objectify.dump(consumers))
@@ -420,12 +429,7 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         member.gender = 'F'
         member.first_name = u'fïrstnâmé'
 
-        sio = StringIO()
-        dataloadtool_export(sio, [member])
-        xml = sio.getvalue()
-        self.assertValidates(xml)
-
-        consumers = objectify.fromstring(xml, self.parser)
+        consumers = self._dataloadtool_export([member])
         self.assertEqual(
             objectify.dump(self.expected_consumers([member])),
             objectify.dump(consumers))
@@ -452,12 +456,7 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
                           'Called with unexpected member: {0!r}'.format(given_member))
             return passwords[id(given_member)]
 
-        sio = StringIO()
-        dataloadtool_export(sio, [m1, m2], password_callback=mock_password)
-        xml = sio.getvalue()
-        self.assertValidates(xml)
-
-        consumers = objectify.fromstring(xml, self.parser)
+        consumers = self._dataloadtool_export([m1, m2], password_callback=mock_password)
         self.assertEqual(
             objectify.dump(expected),
             objectify.dump(consumers))
