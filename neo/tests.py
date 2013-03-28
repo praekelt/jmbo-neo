@@ -317,7 +317,7 @@ class NeoTestCase(_MemberTestCase, TestCase):
 
 class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
     """
-    Exporting to the Data Load Tool.
+    Exporting to the Data Load Tool: `dataloadtool_export()`.
     """
 
     def setUp(self):
@@ -430,6 +430,37 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
             objectify.dump(self.expected_consumers([member])),
             objectify.dump(consumers))
 
+    def test_password_callback(self):
+        """
+        `dataloadtool_export()` should use the password callback.
+        """
+        # One member with a password, and one without.
+        m1 = self.create_member_partial(commit=False)
+        m2 = self.create_member_partial(commit=False)
+        m1.gender = 'F'
+        m2.gender = 'M'
+
+        expected = self.expected_consumers([m1, m2])
+        expected.Consumer[0].UserAccount.LoginCredentials.Password = 'fnord'
+        del expected.Consumer[1].UserAccount.LoginCredentials.Password
+        objectify.deannotate(expected)
+
+        def mock_password(given_member):
+            # XXX: Unsaved objects compare equal by default, so lookup by id instead.
+            passwords = {id(m1): 'fnord', id(m2): None}
+            self.assertIn(id(given_member), passwords,
+                          'Called with unexpected member: {0!r}'.format(given_member))
+            return passwords[id(given_member)]
+
+        sio = StringIO()
+        dataloadtool_export(sio, [m1, m2], password_callback=mock_password)
+        xml = sio.getvalue()
+        self.assertValidates(xml)
+
+        consumers = objectify.fromstring(xml, self.parser)
+        self.assertEqual(
+            objectify.dump(expected),
+            objectify.dump(consumers))
 
 class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
     """

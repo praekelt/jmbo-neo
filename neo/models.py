@@ -2,7 +2,7 @@ import warnings
 from StringIO import StringIO
 from contextlib import contextmanager
 
-from lxml import etree
+from lxml import etree, objectify
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -343,24 +343,49 @@ def set_password(user, raw_password, old_password=None):
     user.password = make_password(raw_password)
 
 
-def dataloadtool_export(output, members, pretty_print=False):
+def dataloadtool_export(output, members, password_callback=None, pretty_print=False):
     """
     Export the given members as XML input for the CIDB Data Load Tool.
 
     :param output: File-like object to write to.
     :param members: Iterator of members to export. If this is a large queryset,
         consider using `iterator()` on it, to avoid excessive caching.
+
+    :param password_callback:
+        If supplied, use this function to set or generate new passwords as part
+        of the export. This can be used, for example, to port member passwords
+        from another source into CIDB.
+
+        The function will be passed each `Member` in turn, and should return
+        either a new (raw, unhashed) password, or `None`, to not include a
+        password in the export. (To preserve what the default exported password
+        would be, the function can explicitly return the member's
+        `raw_password`, if it is set.)
     """
     def etree_from_gds(gds):
         sio = StringIO()
         gds.export(sio, 0, pretty_print=False)
         return etree.fromstring(sio.getvalue())
+    password_path = objectify.ObjectPath('Consumer.UserAccount.LoginCredentials.Password')
 
     output.write('<Consumers>\n')
     for (i, member) in enumerate(members):
         wrapper = wrap_member(member)
         elem = etree_from_gds(wrapper.consumer)
         elem.attrib['recordNumber'] = str(i)
+
+        if password_callback is not None:
+            new_password = password_callback(member)
+            if new_password is not None:
+                # Set (or replace) the password.
+                password_path.setattr(elem, new_password)
+                objectify.deannotate(password_path(elem))
+            else:
+                # Clear the existing password, if any.
+                old_password = password_path(elem)
+                if old_password is not None:
+                    old_password.getparent().remove(old_password)
+
         output.write(etree.tostring(elem, pretty_print=pretty_print))
         output.write('\n')
     output.write('</Consumers>\n')
