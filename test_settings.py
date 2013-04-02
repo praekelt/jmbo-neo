@@ -29,12 +29,12 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'neo.middleware.NeoMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',     
+    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.transaction.TransactionMiddleware',
 )
 
-# A tuple of callables that are used to populate the context in RequestContext. 
-# These callables take a request object as their argument and return a 
+# A tuple of callables that are used to populate the context in RequestContext.
+# These callables take a request object as their argument and return a
 # dictionary of items to be merged into the context.
 TEMPLATE_CONTEXT_PROCESSORS = (
     "django.contrib.auth.context_processors.auth",

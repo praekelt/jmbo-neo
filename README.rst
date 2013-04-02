@@ -40,8 +40,8 @@ will return incorrect results.**
 
 Settings
 ********
-The following settings must be added to settings.py:
-::
+The following settings must be added to settings.py::
+
     NEO = {
         'URL': 'neowebservices.com/service/'
         'APP_ID': '1',
