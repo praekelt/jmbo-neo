@@ -324,11 +324,11 @@ def unsubscribe(consumer_id, unsubscribe_obj):
 
 # add a promo code to a consumer (from master promo code list)
 def add_promo_code(consumer_id, promo_code, acq_src=None, username=None, password=None):
-    #if CONFIG.get('USE_MCAL', False):
-    #    raise NotImplementedError("Consumer requests not supported via MCAL")
     new_r_kwargs = copy.deepcopy(r_kwargs)
     del new_r_kwargs['headers']['content-type']
     new_r_kwargs['headers']['content-length'] = '0'
+    if CONFIG.get('USE_MCAL', False):
+        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, None)
     params = {'promocode': promo_code}
     if acq_src:
         params['acquisitionsource'] = acq_src
