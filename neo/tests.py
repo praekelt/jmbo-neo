@@ -543,3 +543,31 @@ class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
         self.assertEqual(
             set(c.ConsumerProfile.FirstName for c in consumers.Consumer),
             set(['foo', 'bar', 'NEO member']))
+
+    @staticmethod
+    def mock_password_callback(member):
+        return 'fnord'
+
+    def test_load_callback(self):
+        """
+        `load_callback()` works.
+        """
+        callback = self.command.load_callback('neo.tests:DataLoadToolExportCommandTestCase.mock_password_callback')
+        self.assertIs(callback, self.mock_password_callback)
+
+    def test_load_callback_error(self):
+        """
+        `load_callback()` raises a descriptive user error for bad names.
+        """
+        examples = [
+            ('', 'Provide a password callback in "some.module:some.function" format.'),
+            (':', 'Provide a password callback in "some.module:some.function" format.'),
+            ('sys:', 'Provide a password callback in "some.module:some.function" format.'),
+            (':map', 'Provide a password callback in "some.module:some.function" format.'),
+            ('sys:foo', "Failed to look up 'foo' on 'sys': 'module' object has no attribute 'foo'"),
+            ('foo:bar', "Failed to import password callback module 'foo': No module named foo"),
+            ('os:path', "Provided password callback is not callable: <module .*>"),
+        ]
+        for (name, message) in examples:
+            with self.assertRaisesRegexp(management.CommandError, message):
+                self.command.load_callback(name)
