@@ -1,7 +1,6 @@
 import base64
 import re
 import requests
-from datetime import date
 from StringIO import StringIO
 import copy
 
@@ -34,7 +33,7 @@ except KeyError as e:
     raise exceptions.ImproperlyConfigured("Neo setting %s is missing." % str(e))
 
 
-# Determine the appropriate error 
+# Determine the appropriate error
 def _get_error(response):
     if response.status_code == 500:
         return Exception("Neo Web Services not responding")
@@ -61,19 +60,18 @@ def _get_error(response):
         return exceptions.ValidationError(err_msg_list)
     except GDSParseError:
         return Exception(response.content)
-    
+
 
 # create HTTP Authorization header
 def _get_auth_header(username, password, promo_code):
-    return 'Basic %s' % base64.b64encode(':'.join((username, password, \
-        promo_code if promo_code else CONFIG['PROMO_CODE'])))
+    return 'Basic %s' % base64.b64encode(':'.join((username, password, promo_code)))
 
 
 def get_kwargs(username=None, password=None, promo_code=None, no_content=False):
-    new_r_kwargs = r_kwargs
-    if CONFIG.get('USE_MCAL', False):
-        new_r_kwargs = copy.deepcopy(r_kwargs)
-        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, promo_code)
+    new_r_kwargs = copy.deepcopy(r_kwargs)
+    if (username and password) and CONFIG.get('USE_MCAL', False):
+        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password,
+            promo_code if promo_code else CONFIG['PROMO_CODE'])
     if no_content:
         del new_r_kwargs['headers']['content-type']
         new_r_kwargs['headers']['content-length'] = '0'
@@ -91,7 +89,7 @@ def authenticate(username=None, password=None, token=None, promo_code=None, acq_
     if acq_src:
         params['acquisitionsource'] = acq_src
 
-    response = requests.get("%s/consumers/useraccount/" % (BASE_URL, ), \
+    response = requests.get("%s/consumers/useraccount/" % (BASE_URL, ),
         params=params, **get_kwargs())
     if response.status_code == 200:
         return response.content  # response body contains consumer_id
@@ -122,7 +120,7 @@ def create_consumer(consumer):
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
-    response = requests.post("%s/consumers" % (BASE_URL, ), \
+    response = requests.post("%s/consumers" % (BASE_URL, ),
         data=data_stream.getvalue(), **get_kwargs())
     data_stream.close()
     if response.status_code == 201:
@@ -138,7 +136,7 @@ def create_consumer(consumer):
 # activates the newly created consumer account, optionally using a validation uri
 def complete_registration(consumer_id, uri=None):
     if not uri:
-        response = requests.post("%s/consumers/%s/registration" % (BASE_URL, consumer_id), \
+        response = requests.post("%s/consumers/%s/registration" % (BASE_URL, consumer_id),
             **get_kwargs(no_content=True))
     else:
         response = requests.get(uri)
@@ -173,7 +171,7 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
     }
     if acq_src:
         params['acquisitionsource'] = acq_src
-    response = requests.put("%s/consumers/%s/registration/" % (BASE_URL, consumer_id), \
+    response = requests.put("%s/consumers/%s/registration/" % (BASE_URL, consumer_id),
         params=params, **get_kwargs())
     if response.status_code == 200:
         try:
@@ -186,27 +184,27 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
 
 # get a consumer object containing all the consumer data
 def get_consumer(consumer_id, username=None, password=None, promo_code=None):
-    response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id), \
+    response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id),
         **get_kwargs(username=username, password=password, promo_code=promo_code))
     if response.status_code == 200:
         try:
             return parseString(response.content)
         except GDSParseError:
             pass
-    
+
     raise _get_error(response)
 
 
 # get a consumer's profile
 def get_consumer_profile(consumer_id, username=None, password=None, promo_code=None):
-    response = requests.get("%s/consumers/%s/profile" % (BASE_URL, consumer_id), \
+    response = requests.get("%s/consumers/%s/profile" % (BASE_URL, consumer_id),
         **get_kwargs(username=username, password=password, promo_code=promo_code))
     if response.status_code == 200:
         try:
             return parseString(response.content)
         except GDSParseError:
             pass
-    
+
     raise _get_error(response)
 
 
@@ -266,7 +264,7 @@ def get_forgot_password_token(username):
         'loginname': username,
         'temptoken': 0
     }
-    response = requests.get("%s/consumers/useraccount" % (BASE_URL, ), \
+    response = requests.get("%s/consumers/useraccount" % (BASE_URL, ),
         params=params, **get_kwargs())
     if response.status_code == 200:
         try:
@@ -289,12 +287,12 @@ def change_password(username, new_password, old_password=None, token=None):
         params['temptoken'] = token
     else:
         raise ValueError("Either the old password or the forgot password token needs to be specified.")
-    response = requests.put("%s/consumers/useraccount" % (BASE_URL, ), \
+    response = requests.put("%s/consumers/useraccount" % (BASE_URL, ),
         params=params, **get_kwargs(no_content=True))
 
     if response.status_code == 200:
         return response.content
-    
+
     raise _get_error(response)
 
 
@@ -316,7 +314,7 @@ def add_promo_code(consumer_id, promo_code, acq_src=None, username=None, passwor
     params = {'promocode': promo_code}
     if acq_src:
         params['acquisitionsource'] = acq_src
-    response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id), \
+    response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id),
         params=params, **get_kwargs(username=username, password=password, no_content=True))
     if response.status_code != 200:
         raise _get_error(response)
@@ -332,14 +330,14 @@ def do_age_check(dob, country_code, gateway_id, language_code=None):
     }
     if language_code:
         params['language_code'] = language_code
-    response = requests.get("%s/consumers/affirmage" % (BASE_URL, ), \
+    response = requests.get("%s/consumers/affirmage" % (BASE_URL, ),
         params=params, **get_kwargs())
     if response.status_code == 200:
         try:
             return parseString(response.content)
         except GDSParseError:
             pass
-        
+
     raise _get_error(response)
 
 
@@ -351,7 +349,7 @@ def get_country(country_code=None, ip_address=None):
         params = {'ipaddress': ip_address}
     else:
         raise ValueError("Either the country code or ip address needs to be specified.")
-    response = requests.get("%s/country/" % (BASE_URL, ), \
+    response = requests.get("%s/country/" % (BASE_URL, ),
         params=params, **get_kwargs())
     if response.status_code == 200:
         try:
