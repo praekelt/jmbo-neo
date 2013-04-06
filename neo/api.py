@@ -69,6 +69,17 @@ def _get_auth_header(username, password, promo_code):
         promo_code if promo_code else CONFIG['PROMO_CODE'])))
 
 
+def get_kwargs(username=None, password=None, promo_code=None, no_content=False):
+    new_r_kwargs = r_kwargs
+    if CONFIG.get('USE_MCAL', False):
+        new_r_kwargs = copy.deepcopy(r_kwargs)
+        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, promo_code)
+    if no_content:
+        del new_r_kwargs['headers']['content-type']
+        new_r_kwargs['headers']['content-length'] = '0'
+    return new_r_kwargs
+
+
 # authenticates using either username/password or a remember me token
 def authenticate(username=None, password=None, token=None, promo_code=None, acq_src=None):
     params = {'promocode': promo_code if promo_code else CONFIG['PROMO_CODE']}
@@ -79,9 +90,9 @@ def authenticate(username=None, password=None, token=None, promo_code=None, acq_
         params['authtoken'] = token
     if acq_src:
         params['acquisitionsource'] = acq_src
-        
+
     response = requests.get("%s/consumers/useraccount/" % (BASE_URL, ), \
-        params=params, **r_kwargs)
+        params=params, **get_kwargs())
     if response.status_code == 200:
         return response.content  # response body contains consumer_id
     return None
@@ -92,11 +103,8 @@ def logout(consumer_id, promo_code=None, acq_src=None):
     params = {'promocode': promo_code if promo_code else CONFIG['PROMO_CODE']}
     if acq_src:
         params['acquisitionsource'] = acq_src
-    new_r_kwargs = copy.deepcopy(r_kwargs)
-    del new_r_kwargs['headers']['content-type']
-    new_r_kwargs['headers']['content-length'] = '0'
     response = requests.put("%s/consumers/%s/useraccount/notifylogout" % (BASE_URL, consumer_id),
-        params=params, **new_r_kwargs)
+        params=params, **get_kwargs(no_content=True))
     if response.status_code != 200:
         raise _get_error(response)
 
@@ -104,7 +112,7 @@ def logout(consumer_id, promo_code=None, acq_src=None):
 # stores a remember me token on Neo server
 def remember_me(consumer_id, token):
     response = requests.put("%s/consumers/%s/useraccount" % (BASE_URL, consumer_id),
-        params={'authtoken': token}, **r_kwargs)
+        params={'authtoken': token}, **get_kwargs())
     if response.status_code != 200:
         raise _get_error(response)
 
@@ -115,7 +123,7 @@ def create_consumer(consumer):
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
     response = requests.post("%s/consumers" % (BASE_URL, ), \
-        data=data_stream.getvalue(), **r_kwargs)
+        data=data_stream.getvalue(), **get_kwargs())
     data_stream.close()
     if response.status_code == 201:
         # parse the consumer_id in location header
@@ -130,11 +138,8 @@ def create_consumer(consumer):
 # activates the newly created consumer account, optionally using a validation uri
 def complete_registration(consumer_id, uri=None):
     if not uri:
-	new_r_kwargs = copy.deepcopy(r_kwargs)
-        del new_r_kwargs['headers']['content-type']
-        new_r_kwargs['headers']['content-length'] = '0'
         response = requests.post("%s/consumers/%s/registration" % (BASE_URL, consumer_id), \
-            **new_r_kwargs)
+            **get_kwargs(no_content=True))
     else:
         response = requests.get(uri)
     if response.status_code != 200:
@@ -146,7 +151,7 @@ def complete_registration(consumer_id, uri=None):
 def get_consumers(email_id, dob):
     dob_str = dob.strftime("%Y%m%d")
     response = requests.get("%s/consumers/" % (BASE_URL, ),
-        params = {'dateofbirth': dob_str, 'emailid': email_id}, **r_kwargs)
+        params = {'dateofbirth': dob_str, 'emailid': email_id}, **get_kwargs())
     if response.status_code == 200:
         try:
             consumers = parseString(response.content).Consumer
@@ -169,7 +174,7 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
     if acq_src:
         params['acquisitionsource'] = acq_src
     response = requests.put("%s/consumers/%s/registration/" % (BASE_URL, consumer_id), \
-        params=params, **r_kwargs)
+        params=params, **get_kwargs())
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -181,12 +186,8 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
 
 # get a consumer object containing all the consumer data
 def get_consumer(consumer_id, username=None, password=None, promo_code=None):
-    new_r_kwargs = r_kwargs
-    if CONFIG.get('USE_MCAL', False):
-        new_r_kwargs = copy.deepcopy(r_kwargs)
-        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, promo_code)
     response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id), \
-        **new_r_kwargs)
+        **get_kwargs(username=username, password=password, promo_code=promo_code))
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -198,12 +199,8 @@ def get_consumer(consumer_id, username=None, password=None, promo_code=None):
 
 # get a consumer's profile
 def get_consumer_profile(consumer_id, username=None, password=None, promo_code=None):
-    new_r_kwargs = r_kwargs
-    if CONFIG.get('USE_MCAL', False):
-        new_r_kwargs = copy.deepcopy(r_kwargs)
-        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, promo_code)
     response = requests.get("%s/consumers/%s/profile" % (BASE_URL, consumer_id), \
-        **new_r_kwargs)
+        **get_kwargs(username=username, password=password, promo_code=promo_code))
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -231,15 +228,11 @@ def get_consumer_preferences(consumer_id, category_id=None):
 
 # update a consumer's data on the Neo server
 def update_consumer(consumer_id, consumer, username=None, password=None, promo_code=None):
-    new_r_kwargs = r_kwargs
-    if CONFIG.get('USE_MCAL', False):
-        new_r_kwargs = copy.deepcopy(r_kwargs)
-        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, promo_code)
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
     response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id),
-        data=data_stream.getvalue(), **new_r_kwargs)
+        data=data_stream.getvalue(), **get_kwargs(username=username, password=password, promo_code=promo_code))
     data_stream.close()
     if response.status_code != 200:
         raise _get_error(response)
@@ -247,17 +240,16 @@ def update_consumer(consumer_id, consumer, username=None, password=None, promo_c
 
 # create consumer preferences
 # specify category_id to update preferences for a category, otherwise all preferences are updated
-def update_consumer_preferences(consumer_id, preferences, category_id=None, create=False):
+def update_consumer_preferences(consumer_id, preferences, category_id=None, create=False,
+    username=None, password=None, promo_code=None):
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     preferences.export(data_stream, 0)
     uri = "%s/consumers/%s/preferences" % (BASE_URL, consumer_id)
     if category_id:
         uri += "/category/%s" % category_id
-    if create:
-        response = requests.post(uri, data=data_stream.getvalue(), **r_kwargs)
-    else:
-        response = requests.put(uri, data=data_stream.getvalue(), **r_kwargs)
+    response = getattr(requests, 'post' if create else 'put')(uri, data=data_stream.getvalue(),
+        **get_kwargs(username=username, password=password, promo_code=promo_code))
     data_stream.close()
     if response.status_code != 200:
         raise _get_error(response)
@@ -275,7 +267,7 @@ def get_forgot_password_token(username):
         'temptoken': 0
     }
     response = requests.get("%s/consumers/useraccount" % (BASE_URL, ), \
-        params=params, **r_kwargs)
+        params=params, **get_kwargs())
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -297,11 +289,8 @@ def change_password(username, new_password, old_password=None, token=None):
         params['temptoken'] = token
     else:
         raise ValueError("Either the old password or the forgot password token needs to be specified.")
-    new_r_kwargs = copy.deepcopy(r_kwargs)
-    del new_r_kwargs['headers']['content-type']
-    new_r_kwargs['headers']['content-length'] = '0'
     response = requests.put("%s/consumers/useraccount" % (BASE_URL, ), \
-        params=params, **new_r_kwargs)
+        params=params, **get_kwargs(no_content=True))
 
     if response.status_code == 200:
         return response.content
@@ -316,7 +305,7 @@ def unsubscribe(consumer_id, unsubscribe_obj):
     # write the unsubscribe data in xml to a string stream
     unsubscribe_obj.export(data_stream, 0)
     response = requests.put("%s/consumers/%s/preferences/unsubscribe" % (BASE_URL, consumer_id),
-        data=data_stream.getvalue(), **r_kwargs)
+        data=data_stream.getvalue(), **get_kwargs())
     data_stream.close()
     if response.status_code != 200:
         raise _get_error(response)
@@ -324,16 +313,11 @@ def unsubscribe(consumer_id, unsubscribe_obj):
 
 # add a promo code to a consumer (from master promo code list)
 def add_promo_code(consumer_id, promo_code, acq_src=None, username=None, password=None):
-    new_r_kwargs = copy.deepcopy(r_kwargs)
-    del new_r_kwargs['headers']['content-type']
-    new_r_kwargs['headers']['content-length'] = '0'
-    if CONFIG.get('USE_MCAL', False):
-        new_r_kwargs['headers']['Authorization'] = _get_auth_header(username, password, None)
     params = {'promocode': promo_code}
     if acq_src:
         params['acquisitionsource'] = acq_src
     response = requests.put("%s/consumers/%s" % (BASE_URL, consumer_id), \
-        params=params, **new_r_kwargs)
+        params=params, **get_kwargs(username=username, password=password, no_content=True))
     if response.status_code != 200:
         raise _get_error(response)
 
@@ -349,7 +333,7 @@ def do_age_check(dob, country_code, gateway_id, language_code=None):
     if language_code:
         params['language_code'] = language_code
     response = requests.get("%s/consumers/affirmage" % (BASE_URL, ), \
-        params=params, **r_kwargs)
+        params=params, **get_kwargs())
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -368,7 +352,7 @@ def get_country(country_code=None, ip_address=None):
     else:
         raise ValueError("Either the country code or ip address needs to be specified.")
     response = requests.get("%s/country/" % (BASE_URL, ), \
-        params=params, **r_kwargs)
+        params=params, **get_kwargs())
     if response.status_code == 200:
         try:
             return parseString(response.content)
