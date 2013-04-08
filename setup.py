@@ -15,7 +15,7 @@ setup(
         'http://github.com/praekelt/jmbo-competition/tarball/feature/competition_entry_form/2.6.praekelt#egg=jmbo-competition-2.6.praekelt',
     ],
     install_requires = [
-        'jmbo-foundry==1.1.15',
+        'jmbo-foundry>=1.1.15,<1.2',
         'django-ckeditor',
         # jmbo-neo depends on requests.defaults, which requests 1.0.0 removes.
         'requests<1',
