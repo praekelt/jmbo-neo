@@ -210,11 +210,12 @@ def get_consumer_profile(consumer_id, username=None, password=None, promo_code=N
 
 # get a consumer's preferences
 # specify category_id to get preferences for a category, otherwise all preferences are returned
-def get_consumer_preferences(consumer_id, category_id=None):
+def get_consumer_preferences(consumer_id, category_id=None,
+    username=None, password=None, promo_code=None):
     uri = "%s/consumers/%s/preferences" % (BASE_URL, consumer_id)
     if category_id:
         uri += "/category/%s" % category_id
-    response = requests.get(uri, **r_kwargs)
+    response = requests.get(uri, **get_kwargs(username=username, password=password, promo_code=promo_code))
     if response.status_code == 200:
         try:
             return parseString(response.content)
@@ -242,7 +243,7 @@ def update_consumer_preferences(consumer_id, preferences, category_id=None, crea
     username=None, password=None, promo_code=None):
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
-    preferences.export(data_stream, 0)
+    preferences.export(data_stream, 0, name_="Preferences")
     uri = "%s/consumers/%s/preferences" % (BASE_URL, consumer_id)
     if category_id:
         uri += "/category/%s" % category_id

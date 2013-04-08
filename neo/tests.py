@@ -30,6 +30,7 @@ from competition.models import Competition
 from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS, dataloadtool_export
 from neo.forms import NeoTokenGenerator
 from neo import api, constants
+from neo.xml import AnswerType
 from neo.utils import BRAND_ID, PROMO_CODE, ConsumerWrapper, dataloadtool_schema
 
 
@@ -288,6 +289,30 @@ class NeoTestCase(_MemberTestCase, TestCase):
         member.gender = 'F'
         member.save()
         self.assertTrue(NeoProfile.objects.filter(user=member).exists())
+
+    def test_add_promo_code(self):
+        member = self.create_member()
+        api.add_promo_code(member.neoprofile.consumer_id, 'added_promo_code',
+            username=member.username, password='password')
+        consumer = api.get_consumer_profile(member.neoprofile.consumer_id, username=member.username,
+            password='password')
+        self.assertEqual('added_promo_code', consumer.ConsumerProfile.PromoCode)
+
+    def test_add_consumer_preferences(self):
+        member = self.create_member()
+        cw = ConsumerWrapper()
+        cw._set_preference(answer=AnswerType(OptionID=2), category_id=10, question_id=112,
+            mod_flag=constants.modify_flag['INSERT'])
+        # the promo code for this particular question is mandatory
+        cw.consumer.Preferences.PromoCode = 'special_preference_promo'
+        api.update_consumer_preferences(member.neoprofile.consumer_id, cw.consumer.Preferences,
+            username=member.username, password='password', category_id=10)
+        prefs = api.get_consumer_preferences(member.neoprofile.consumer_id, username=member.username,
+            password='password', category_id=10)
+        self.assertEqual(prefs.PromoCode, 'special_preference_promo')
+        question = prefs.QuestionCategory[0].QuestionAnswers[0]
+        self.assertEqual(question.QuestionID, 112)
+        self.assertEqual(question.Answer[0].OptionID, 2)
 
 
 class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
