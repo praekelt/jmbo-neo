@@ -384,11 +384,10 @@ def dataloadtool_export(output, members, password_callback=None, pretty_print=Fa
                 # Set (or replace) the password.
                 password_path.setattr(elem, new_password)
                 objectify.deannotate(password_path(elem), cleanup_namespaces=True)
-            else:
-                # Clear the existing password, if any.
+            elif password_path.hasattr(elem):
+                # Clear the existing password element, if one exists.
                 old_password = password_path(elem)
-                if old_password is not None:
-                    old_password.getparent().remove(old_password)
+                old_password.getparent().remove(old_password)
 
         output.write(etree.tostring(elem, pretty_print=pretty_print))
         output.write('\n')

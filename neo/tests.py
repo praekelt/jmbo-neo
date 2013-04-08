@@ -441,6 +441,7 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         # One member with a password, and one without.
         m1 = self.create_member_partial(commit=False)
         m2 = self.create_member_partial(commit=False)
+        del m2.raw_password  # Make sure that an entirely missing Password element is handled correctly.
         m1.gender = 'F'
         m2.gender = 'M'
 
