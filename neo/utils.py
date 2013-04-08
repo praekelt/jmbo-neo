@@ -336,20 +336,20 @@ class ConsumerWrapper(object):
                         break
 
 
-class DigitalInteractionsWrapper(object):
+class QuestionAnswersWrapper(object):
     '''
-    A wrapper class to make it easier to construct a digital interactions object
+    A wrapper class to make it easier to construct objects that contain QuestionAnswers
     '''
 
-    def __init__(self):
-        self.digitalinteractions = DigitalInteractionsType()
+    def __init__(self, object_class, promo_code=None):
+        self.object = object_class(PromoCode=promo_code)
 
     def add_question_answer(self, question_id, category_id, option_id=None, answer_text=None, mod_flag=modify_flag['INSERT']):
-        di = self.digitalinteractions
+        obj = self.object
         answer = AnswerType(OptionID=option_id, AnswerText=answer_text, ModifyFlag=mod_flag)
         q_category = None
         has_question = False
-        for cat in di.QuestionCategory:
+        for cat in obj.QuestionCategory:
             if cat.CategoryID == category_id:
                 q_category = cat
                 for q in cat.QuestionAnswers:
@@ -363,7 +363,7 @@ class DigitalInteractionsWrapper(object):
         if not has_question:
             if not q_category:
                 q_category = CategoryType(CategoryID=category_id)
-                di.add_QuestionCategory(q_category)
+                obj.add_QuestionCategory(q_category)
             q_answer = QuestionAnswerType(QuestionID=question_id)
             q_category.add_QuestionAnswers(q_answer)
             q_answer.add_Answer(answer)

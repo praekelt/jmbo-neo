@@ -237,14 +237,17 @@ def update_consumer(consumer_id, consumer, username=None, password=None, promo_c
         raise _get_error(response)
 
 
-# create consumer preferences
-# specify category_id to update preferences for a category, otherwise all preferences are updated
-def update_consumer_preferences(consumer_id, preferences, category_id=None, create=False,
-    username=None, password=None, promo_code=None):
+def _update_question_answers(consumer_id, object, category_id=None, create=False,
+    username=None, password=None, promo_code=None, root_tag_name=None, uri=None):
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
-    preferences.export(data_stream, 0, name_="Preferences")
-    uri = "%s/consumers/%s/preferences" % (BASE_URL, consumer_id)
+    if root_tag_name:
+        object.export(data_stream, 0, name_=root_tag_name)
+    else:
+        object.export(data_stream, 0)
+    if not uri:
+        uri = "%s/consumers/%s/%s" % (BASE_URL, consumer_id,
+            root_tag_name.lower() if root_tag_name else object.__name__.lower())
     if category_id:
         uri += "/category/%s" % category_id
     response = getattr(requests, 'post' if create else 'put')(uri, data=data_stream.getvalue(),
@@ -254,20 +257,26 @@ def update_consumer_preferences(consumer_id, preferences, category_id=None, crea
         raise _get_error(response)
 
 
+# create consumer preferences
+# specify category_id to update preferences for a category, otherwise all preferences are updated
+def update_consumer_preferences(consumer_id, preferences, category_id=None, create=False,
+    username=None, password=None, promo_code=None):
+    _update_question_answers(consumer_id, preferences, category_id, create, username,
+        password, promo_code, 'Preferences')
+
+
 # add digital interactions to consumer
 def add_digital_interactions(consumer_id, digital_interactions, category_id=None, create=False,
     username=None, password=None, promo_code=None):
-    data_stream = StringIO()
-    # write the consumer data in xml to a string stream
-    digital_interactions.export(data_stream, 0, name_="DigitalInteractions")
-    uri = "%s/consumers/%s/digitalinteractions" % (BASE_URL, consumer_id)
-    if category_id:
-        uri += "/digitalinteractionscategory/%s" % category_id
-    response = getattr(requests, 'post' if create else 'put')(uri, data=data_stream.getvalue(),
-        **get_kwargs(username=username, password=password, promo_code=promo_code))
-    data_stream.close()
-    if response.status_code != 200:
-        raise _get_error(response)
+    _update_question_answers(consumer_id, digital_interactions, category_id, create, username,
+        password, promo_code, 'DigitalInteractions')
+
+
+# add conversion locations to consumer
+def add_conversion_locations(consumer_id, conversion_locations, category_id=None, create=False,
+    username=None, password=None, promo_code=None):
+    _update_question_answers(consumer_id, conversion_locations, category_id, create, username,
+        password, promo_code, 'ConversionLocations')
 
 
 # deletes the consumer account
