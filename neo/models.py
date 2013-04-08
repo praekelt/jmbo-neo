@@ -383,7 +383,7 @@ def dataloadtool_export(output, members, password_callback=None, pretty_print=Fa
             if new_password is not None:
                 # Set (or replace) the password.
                 password_path.setattr(elem, new_password)
-                objectify.deannotate(password_path(elem))
+                objectify.deannotate(password_path(elem), cleanup_namespaces=True)
             else:
                 # Clear the existing password, if any.
                 old_password = password_path(elem)

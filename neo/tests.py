@@ -447,7 +447,7 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         expected = self.expected_consumers([m1, m2])
         expected.Consumer[0].UserAccount.LoginCredentials.Password = 'fnord'
         del expected.Consumer[1].UserAccount.LoginCredentials.Password
-        objectify.deannotate(expected)
+        objectify.deannotate(expected, cleanup_namespaces=True)
 
         def mock_password(given_member):
             # XXX: Unsaved objects compare equal by default, so lookup by id instead.
