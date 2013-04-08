@@ -317,7 +317,7 @@ class NeoTestCase(_MemberTestCase, TestCase):
 
 class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
     """
-    Exporting to the Data Load Tool.
+    Exporting to the Data Load Tool: `dataloadtool_export()`.
     """
 
     def setUp(self):
@@ -337,6 +337,20 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
             self.consumers_schema.validate(tree),
             'Validation failed: {0}'.format(self.consumers_schema.error_log.last_error)
         )
+
+    def _dataloadtool_export(self, *args, **kwargs):
+        """
+        Call `dataloadtool_export()` with the supplied additional arguments.
+
+        :return: Validated Consumers `objectify` tree.
+        """
+        sio = StringIO()
+        dataloadtool_export(sio, *args, **kwargs)
+        xml = sio.getvalue()
+        self.assertValidates(xml)
+
+        consumers = objectify.fromstring(xml, self.parser)
+        return consumers
 
     def expected_consumer(self, member, **kwargs):
         """
@@ -402,12 +416,7 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         members[0].gender = 'F'
         members[1].gender = 'M'
 
-        sio = StringIO()
-        dataloadtool_export(sio, members)
-        xml = sio.getvalue()
-        self.assertValidates(xml)
-
-        consumers = objectify.fromstring(xml, self.parser)
+        consumers = self._dataloadtool_export(members)
         self.assertEqual(
             objectify.dump(self.expected_consumers(members)),
             objectify.dump(consumers))
@@ -420,16 +429,38 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         member.gender = 'F'
         member.first_name = u'fïrstnâmé'
 
-        sio = StringIO()
-        dataloadtool_export(sio, [member])
-        xml = sio.getvalue()
-        self.assertValidates(xml)
-
-        consumers = objectify.fromstring(xml, self.parser)
+        consumers = self._dataloadtool_export([member])
         self.assertEqual(
             objectify.dump(self.expected_consumers([member])),
             objectify.dump(consumers))
 
+    def test_password_callback(self):
+        """
+        `dataloadtool_export()` should use the password callback.
+        """
+        # One member with a password, and one without.
+        m1 = self.create_member_partial(commit=False)
+        m2 = self.create_member_partial(commit=False)
+        del m2.raw_password  # Make sure that an entirely missing Password element is handled correctly.
+        m1.gender = 'F'
+        m2.gender = 'M'
+
+        expected = self.expected_consumers([m1, m2])
+        expected.Consumer[0].UserAccount.LoginCredentials.Password = 'fnord'
+        del expected.Consumer[1].UserAccount.LoginCredentials.Password
+        objectify.deannotate(expected, cleanup_namespaces=True)
+
+        def mock_password(given_member):
+            # XXX: Unsaved objects compare equal by default, so lookup by id instead.
+            passwords = {id(m1): 'fnord', id(m2): None}
+            self.assertIn(id(given_member), passwords,
+                          'Called with unexpected member: {0!r}'.format(given_member))
+            return passwords[id(given_member)]
+
+        consumers = self._dataloadtool_export([m1, m2], password_callback=mock_password)
+        self.assertEqual(
+            objectify.dump(expected),
+            objectify.dump(consumers))
 
 class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
     """
@@ -513,3 +544,31 @@ class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
         self.assertEqual(
             set(c.ConsumerProfile.FirstName for c in consumers.Consumer),
             set(['foo', 'bar', 'NEO member']))
+
+    @staticmethod
+    def mock_password_callback(member):
+        return 'fnord'
+
+    def test_load_callback(self):
+        """
+        `load_callback()` works.
+        """
+        callback = self.command.load_callback('neo.tests:DataLoadToolExportCommandTestCase.mock_password_callback')
+        self.assertIs(callback, self.mock_password_callback)
+
+    def test_load_callback_error(self):
+        """
+        `load_callback()` raises a descriptive user error for bad names.
+        """
+        examples = [
+            ('', 'Provide a password callback in "some.module:some.function" format.'),
+            (':', 'Provide a password callback in "some.module:some.function" format.'),
+            ('sys:', 'Provide a password callback in "some.module:some.function" format.'),
+            (':map', 'Provide a password callback in "some.module:some.function" format.'),
+            ('sys:foo', "Failed to look up 'foo' on 'sys': 'module' object has no attribute 'foo'"),
+            ('foo:bar', "Failed to import password callback module 'foo': No module named foo"),
+            ('os:path', "Provided password callback is not callable: <module .*>"),
+        ]
+        for (name, message) in examples:
+            with self.assertRaisesRegexp(management.CommandError, message):
+                self.command.load_callback(name)
