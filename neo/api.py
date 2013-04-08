@@ -254,6 +254,22 @@ def update_consumer_preferences(consumer_id, preferences, category_id=None, crea
         raise _get_error(response)
 
 
+# add digital interactions to consumer
+def add_digital_interactions(consumer_id, digital_interactions, category_id=None, create=False,
+    username=None, password=None, promo_code=None):
+    data_stream = StringIO()
+    # write the consumer data in xml to a string stream
+    digital_interactions.export(data_stream, 0, name_="DigitalInteractions")
+    uri = "%s/consumers/%s/digitalinteractions" % (BASE_URL, consumer_id)
+    if category_id:
+        uri += "/digitalinteractionscategory/%s" % category_id
+    response = getattr(requests, 'post' if create else 'put')(uri, data=data_stream.getvalue(),
+        **get_kwargs(username=username, password=password, promo_code=promo_code))
+    data_stream.close()
+    if response.status_code != 200:
+        raise _get_error(response)
+
+
 # deletes the consumer account
 def remove_consumer(consumer_id):
     raise NotImplementedError()

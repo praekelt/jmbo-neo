@@ -10,7 +10,7 @@ from neo.constants import country_option_id, address_type, gender, marital_statu
     modify_flag, phone_type, email_category, comm_channel, question_category
 from neo.xml import Consumer, ConsumerProfileType, PreferencesType, UserAccountType, \
     EmailDetailsType, PhoneDetailsType, AnswerType, CategoryType, LoginCredentialsType, \
-    QuestionAnswerType, AddressDetailsType
+    QuestionAnswerType, AddressDetailsType, DigitalInteractionsType
 from neo import api
 
 
@@ -334,6 +334,39 @@ class ConsumerWrapper(object):
                         email.EmailId = email
                         email.ModifyFlag = mod_flag
                         break
+
+
+class DigitalInteractionsWrapper(object):
+    '''
+    A wrapper class to make it easier to construct a digital interactions object
+    '''
+
+    def __init__(self):
+        self.digitalinteractions = DigitalInteractionsType()
+
+    def add_question_answer(self, question_id, category_id, option_id=None, answer_text=None, mod_flag=modify_flag['INSERT']):
+        di = self.digitalinteractions
+        answer = AnswerType(OptionID=option_id, AnswerText=answer_text, ModifyFlag=mod_flag)
+        q_category = None
+        has_question = False
+        for cat in di.QuestionCategory:
+            if cat.CategoryID == category_id:
+                q_category = cat
+                for q in cat.QuestionAnswers:
+                    if q.QuestionID == question_id:
+                        q.add_Answer(answer)
+                        has_question = True
+                        break
+            if q_category:
+                break
+        # if the question category or question does not exist
+        if not has_question:
+            if not q_category:
+                q_category = CategoryType(CategoryID=category_id)
+                di.add_QuestionCategory(q_category)
+            q_answer = QuestionAnswerType(QuestionID=question_id)
+            q_category.add_QuestionAnswers(q_answer)
+            q_answer.add_Answer(answer)
 
 
 class PythonPackageResolver(etree.Resolver):
