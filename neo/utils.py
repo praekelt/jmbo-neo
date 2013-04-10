@@ -344,7 +344,7 @@ class QuestionAnswersWrapper(object):
     def __init__(self, object_class, promo_code=None):
         self.object = object_class(PromoCode=promo_code)
 
-    def add_question_answer(self, question_id, category_id, option_id=None, answer_text=None, mod_flag=modify_flag['INSERT']):
+    def add_question_answer(self, question_id, category_id, option_id=None, answer_text=None, mod_flag=modify_flag['MODIFY']):
         obj = self.object
         answer = AnswerType(OptionID=option_id, AnswerText=answer_text, ModifyFlag=mod_flag)
         q_category = None

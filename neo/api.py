@@ -266,14 +266,14 @@ def update_consumer_preferences(consumer_id, preferences, category_id=None, crea
 
 
 # add digital interactions to consumer
-def add_digital_interactions(consumer_id, digital_interactions, category_id=None, create=False,
+def update_digital_interactions(consumer_id, digital_interactions, category_id=None, create=False,
     username=None, password=None, promo_code=None):
     _update_question_answers(consumer_id, digital_interactions, category_id, create, username,
         password, promo_code, 'DigitalInteractions')
 
 
 # add conversion locations to consumer
-def add_conversion_locations(consumer_id, conversion_locations, category_id=None, create=False,
+def update_conversion_locations(consumer_id, conversion_locations, category_id=None, create=False,
     username=None, password=None, promo_code=None):
     _update_question_answers(consumer_id, conversion_locations, category_id, create, username,
         password, promo_code, 'ConversionLocations')
