@@ -385,8 +385,8 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
                 E.CategoryID(constants.question_category['OPTIN']),
                 E.QuestionAnswers(
                     E.QuestionID(64),
-                    E.Answer(E.OptionID(2), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['EMAIL'])),
-                    E.Answer(E.OptionID(2), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['SMS'])),
+                    E.Answer(E.OptionID(99), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['EMAIL'])),
+                    E.Answer(E.OptionID(99), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['SMS'])),
                 ),
             ),
         )

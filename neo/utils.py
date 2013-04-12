@@ -104,13 +104,13 @@ class ConsumerWrapper(object):
         if answers:
             for a in answers:
                 if a.BrandID == brand_id and a.CommunicationChannel == comm_channel:
-                    a.OptionID = 1 if value else 2
+                    a.OptionID = 1 if value else 99  # 99 for 'No response - Jmbo default'
                     a.ModifyFlag = mod_flag
                     updated = True
                     break
         if not updated:
             answer = AnswerType(
-                OptionID=(1 if value else 2),
+                OptionID=(1 if value else 99),
                 BrandID=brand_id,
                 CommunicationChannel=comm_channel
             )
