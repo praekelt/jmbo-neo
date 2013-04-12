@@ -162,32 +162,32 @@ def update_consumer(member):
                 else:
                     getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['UPDATE'])
 
-    # check if address needs to change
-    has_address = False
-    had_address = False
-    address_changed = False
-    for k in ADDRESS_FIELDS:
-        current = getattr(member, k, None)
-        old = old_member.get(k, None)
-        if current:
-            has_address = True
-        if old:
-            had_address = True
-        if current != old:
-            address_changed = True
-    # update address accordingly
-    if address_changed:
-        if not has_address:
-            wrapper.set_address(old_member.address, old_member.city,
-                old_member.province, old_member.zipcode, old_member.country,
-                modify_flag['DELETE'])
-        elif not had_address:
-            wrapper.set_address(member.address, member.city,
-                member.province, member.zipcode, member.country)
-        else:
-            wrapper.set_address(member.address, member.city,
-                member.province, member.zipcode, member.country,
-                mod_flag=modify_flag['UPDATE'])
+        # check if address needs to change
+        has_address = False
+        had_address = False
+        address_changed = False
+        for k in ADDRESS_FIELDS:
+            current = getattr(member, k, None)
+            old = old_member.get(k, None)
+            if current:
+                has_address = True
+            if old:
+                had_address = True
+            if current != old:
+                address_changed = True
+        # update address accordingly
+        if address_changed:
+            if not has_address:
+                wrapper.set_address(old_member.address, old_member.city,
+                    old_member.province, old_member.zipcode, old_member.country,
+                    modify_flag['DELETE'])
+            elif not had_address:
+                wrapper.set_address(member.address, member.city,
+                    member.province, member.zipcode, member.country)
+            else:
+                wrapper.set_address(member.address, member.city,
+                    member.province, member.zipcode, member.country,
+                    mod_flag=modify_flag['UPDATE'])
 
     if not wrapper.is_empty:
         if not wrapper.profile_is_empty:
