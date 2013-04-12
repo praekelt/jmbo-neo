@@ -214,7 +214,7 @@ class ConsumerWrapper(object):
 
     @property
     def gender(self):
-        if self._consumer.ConsumerProfile is not None:
+        if self._consumer.ConsumerProfile is not None and self._consumer.ConsumerProfile.Gender is not None:
             return ('M' if self._consumer.ConsumerProfile.Gender == gender['MALE'] else 'F')
         return None
 
