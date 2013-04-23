@@ -280,14 +280,23 @@ class NeoTestCase(_MemberTestCase, TestCase):
         self.assertTrue(NeoProfile.objects.filter(user=member).exists())
 
     def test_add_promo_code(self):
+        '''
+        This test can fail due to the new promo code not having propagated in CIDB.
+        To solve, one can put time.sleep(2) before get_consumer_profile.
+        '''
         member = self.create_member()
         api.add_promo_code(member.neoprofile.consumer_id, 'added_promo_code',
             username=member.username, password='password')
+        #time.sleep(2)
         consumer = api.get_consumer_profile(member.neoprofile.consumer_id, username=member.username,
             password='password')
         self.assertEqual('added_promo_code', consumer.ConsumerProfile.PromoCode)
 
     def test_add_consumer_preferences(self):
+        '''
+        This test can fail due to the new promo code not having propagated in CIDB.
+        To solve, one can put time.sleep(2) before get_consumer_preferences.
+        '''
         member = self.create_member()
         cw = ConsumerWrapper()
         cw._set_preference(answer=AnswerType(OptionID=2), category_id=10, question_id=112,
@@ -296,6 +305,7 @@ class NeoTestCase(_MemberTestCase, TestCase):
         cw.consumer.Preferences.PromoCode = 'special_preference_promo'
         api.update_consumer_preferences(member.neoprofile.consumer_id, cw.consumer.Preferences,
             username=member.username, password='password', category_id=10)
+        #time.sleep(2)
         prefs = api.get_consumer_preferences(member.neoprofile.consumer_id, username=member.username,
             password='password', category_id=10)
         self.assertEqual(prefs.PromoCode, 'special_preference_promo')
