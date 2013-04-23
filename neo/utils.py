@@ -1,17 +1,16 @@
 import pkgutil
-from datetime import date, datetime
+from datetime import datetime
 
 from django.conf import settings
 from lxml import etree
 
 from foundry.models import Country
 
-from neo.constants import country_option_id, address_type, gender, marital_status, \
+from neo.constants import country_option_id, address_type, gender, \
     modify_flag, phone_type, email_category, comm_channel, question_category
 from neo.xml import Consumer, ConsumerProfileType, PreferencesType, UserAccountType, \
     EmailDetailsType, PhoneDetailsType, AnswerType, CategoryType, LoginCredentialsType, \
-    QuestionAnswerType, AddressDetailsType, DigitalInteractionsType
-from neo import api
+    QuestionAnswerType, AddressDetailsType
 
 
 # retrieve the brand id and promo code for the website

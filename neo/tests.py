@@ -1,31 +1,27 @@
 # encoding: utf-8
-import os.path
 import re
 import time
 from StringIO import StringIO
-from datetime import timedelta, date, datetime
+from datetime import timedelta, date
 
 from lxml import etree, objectify
 
 from django.test import TestCase
-from django.test.client import Client
 from django.utils import timezone
 from django.core import management
 from django.core.cache import cache
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.contrib.sessions.models import Session
-from django.contrib.sites.models import Site
 from django.http import HttpRequest
 from django.utils.importlib import import_module
-from django.contrib.auth import login, get_backends, authenticate
+from django.contrib.auth import login, authenticate
 from django.contrib.auth.models import User
 from django.db.models.fields import FieldDoesNotExist
 from django.contrib.auth.hashers import make_password
 from django.db import connection, transaction
 
-from foundry.models import Member, Country, RegistrationPreferences
-from competition.models import Competition
+from foundry.models import Member, Country
 
 from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS, dataloadtool_export
 from neo.forms import NeoTokenGenerator
@@ -192,13 +188,6 @@ class NeoTestCase(_MemberTestCase, TestCase):
         self.assertTrue(self.login_basic(member))
         self.client.logout()
 
-    def test_auto_create_member_from_consumer(self):
-        member = self.create_member()
-        Member.objects.filter(username=member.username).delete()
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
-        self.assertTrue(self.client.login(username=member.username, password='password'))
-        self.assertTrue(Member.objects.filter(username=member.username).exists())
-
     def test_auto_create_consumer_from_member(self):
         '''
         Insert new member directly into db to avoid patched Member/User methods
@@ -313,6 +302,15 @@ class NeoTestCase(_MemberTestCase, TestCase):
         question = prefs.QuestionCategory[0].QuestionAnswers[0]
         self.assertEqual(question.QuestionID, 112)
         self.assertEqual(question.Answer[0].OptionID, 2)
+
+    def test_login_alias(self):
+        member = self.create_member()
+        member.username = "%sx" % member.username
+        member.save()
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
+        self.assertTrue(self.client.login(username=member.username, password='password'))
+        member.first_name = "%sx" % member.first_name
+        member.save()
 
 
 class DataLoadToolExportTestCase(_MemberTestCase, TestCase):

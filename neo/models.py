@@ -1,6 +1,5 @@
 import warnings
 from StringIO import StringIO
-from contextlib import contextmanager
 
 from lxml import etree, objectify
 
@@ -17,7 +16,6 @@ from preferences import preferences
 from foundry.models import Member, DefaultAvatar
 from social_auth.db.django_models import UserSocialAuth
 
-import neo.xml
 from neo import api
 from neo.utils import ConsumerWrapper
 from neo.constants import modify_flag
@@ -27,6 +25,20 @@ class NeoProfile(models.Model):
     user = models.OneToOneField(User)
     # the Neo consumer id used in API requests
     consumer_id = models.PositiveIntegerField(primary_key=True)
+    '''
+    The login_alias is for the benefit of exporting existing users with
+    usernames that clash without case-sensitivity. If a site was launched
+    with Neo integration, user.username = login_alias for all members.
+    '''
+    login_alias = models.CharField(max_length=50, unique=True)
+
+    def save(self, *args, **kwargs):
+        if not self.login_alias:
+            '''
+            Always store login_alias in lowercase to be able to enforce uniqueness.
+            '''
+            self.login_alias = self.user.username.lower()
+        super(NeoProfile, self).save(*args, **kwargs)
 
 
 '''
@@ -36,7 +48,7 @@ NB. Password is a special case and is handled separately
 NB. Address, city and province are also special cases
 '''
 NEO_ATTR = frozenset((
-    'username', 'first_name', 'last_name', 'dob',
+    'first_name', 'last_name', 'dob',
     'email', 'mobile_number', 'receive_sms',
     'receive_email', 'country', 'gender'))
 
@@ -72,7 +84,7 @@ def neo_login(sender, **kwargs):
         # check that neo profile exists - throws DoesNotExist if there is no profile
         user.neoprofile
         # Authenticate via Neo in addition to Django
-        api.authenticate(user.username, user.raw_password)
+        api.authenticate(user.neoprofile.login_alias, user.raw_password)
     except NeoProfile.DoesNotExist:
         try:
             user.save()
@@ -116,7 +128,7 @@ def wrap_member(member):
     Return a `ConsumerWrapper` reflecting the given `Member`.
     """
     wrapper = ConsumerWrapper()
-    for a in NEO_ATTR:
+    for a in NEO_ATTR.union(set(('username', ))):
         getattr(wrapper, "set_%s" % a)(getattr(member, a))
     # A raw_password is not always set (for example, when exporting members
     # from the command line).
@@ -191,16 +203,16 @@ def update_consumer(member):
 
     if not wrapper.is_empty:
         if not wrapper.profile_is_empty:
-            wrapper.set_ids_for_profile(api.get_consumer_profile(consumer_id, username=member.username, \
+            wrapper.set_ids_for_profile(api.get_consumer_profile(consumer_id, username=member.neoprofile.login_alias,
                 password=member.raw_password))
-        api.update_consumer(consumer_id, wrapper.consumer, username=member.username, password=member.raw_password)
+        api.update_consumer(consumer_id, wrapper.consumer, username=member.neoprofile.login_alias, password=member.raw_password)
 
     # check if password needs to be changed
     if hasattr(member, 'raw_password'):
         if hasattr(member, 'old_password'):
-            api.change_password(member.username, member.raw_password, old_password=member.old_password)
+            api.change_password(member.neoprofile.login_alias, member.raw_password, old_password=member.old_password)
         elif hasattr(member, 'forgot_password_token'):
-            api.change_password(member.username, member.raw_password, token=member.forgot_password_token)
+            api.change_password(member.neoprofile.login_alias, member.raw_password, token=member.forgot_password_token)
     return consumer_id
 
 
@@ -278,9 +290,9 @@ def clean_user(user, called_from_child=False):
             # check if password needs to be changed
             if hasattr(user, 'raw_password'):
                 if hasattr(user, 'old_password'):
-                    api.change_password(user.username, user.raw_password, old_password=user.old_password)
+                    api.change_password(user.neoprofile.login_alias, user.raw_password, old_password=user.old_password)
                 elif hasattr(user, 'forgot_password_token'):
-                    api.change_password(user.username, user.raw_password, token=user.forgot_password_token)
+                    api.change_password(user.neoprofile.login_alias, user.raw_password, token=user.forgot_password_token)
     except NeoProfile.DoesNotExist:
         pass
 
