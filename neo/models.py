@@ -123,13 +123,19 @@ def stash_neo_fields(member, clear=False):
     return stashed_fields
 
 
-def wrap_member(member):
+def wrap_member(member, login_alias=None):
     """
     Return a `ConsumerWrapper` reflecting the given `Member`.
     """
     wrapper = ConsumerWrapper()
-    for a in NEO_ATTR.union(set(('username', ))):
+    for a in NEO_ATTR:
         getattr(wrapper, "set_%s" % a)(getattr(member, a))
+    # Use a login_alias instead if specified
+    # member.username.lower() is not guaranteed to be unique
+    if login_alias:
+        wrapper.set_username(login_alias)
+    else:
+        wrapper.set_username(member.username.lower())
     # A raw_password is not always set (for example, when exporting members
     # from the command line).
     if getattr(member, 'raw_password', None):
@@ -355,12 +361,12 @@ def set_password(user, raw_password, old_password=None):
     user.password = make_password(raw_password)
 
 
-def dataloadtool_export(output, members, password_callback=None, pretty_print=False):
+def dataloadtool_export(output, output_login_alias, members, password_callback=None, pretty_print=False):
     """
     Export the given members as XML input for the CIDB Data Load Tool.
 
     :param output: File-like object to write to.
-    :param members: Iterator of members to export. If this is a large queryset,
+    :param members: Queryset of members to export. If this is a large queryset,
         consider using `iterator()` on it, to avoid excessive caching.
 
     :param password_callback:
@@ -385,8 +391,26 @@ def dataloadtool_export(output, members, password_callback=None, pretty_print=Fa
     password_path = objectify.ObjectPath('Consumer.UserAccount.LoginCredentials.Password')
 
     output.write('<Consumers>\n')
-    for (i, member) in enumerate(members):
-        wrapper = wrap_member(member)
+    last_username = ''
+    import time
+    # Important: The iterator() call prevents memory usage from growing out
+    # of control, when exporting many members. Don't remove it accidentally.
+    for (i, member) in enumerate(members.select_related('neoprofile').order_by('username').iterator()):
+        # Resolve duplicate usernames, or use available login_alias
+        try:
+            wrapper = wrap_member(member, login_alias=member.neoprofile.login_alias)
+        except (NeoProfile.DoesNotExist, AttributeError):
+            if member.username.lower() == last_username:
+                # append part of timestamp to username to make it unique
+                timestamp = str(int(time.time() * 1000000))[-10:]
+                login_alias = "%s%s" % (member.username, timestamp)
+                wrapper = wrap_member(member, login_alias=login_alias)
+                # write aliases to file
+                output_login_alias.write('"%s","%s"\n' % (member.username, login_alias))
+            else:
+                wrapper = wrap_member(member)
+        last_username = member.username.lower()
+
         elem = etree_from_gds(wrapper.consumer)
         elem.attrib['recordNumber'] = str(i)
 

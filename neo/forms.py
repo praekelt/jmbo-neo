@@ -17,7 +17,7 @@ class NeoTokenGenerator(PasswordResetTokenGenerator):
         try:
             return api.get_forgot_password_token(user.neoprofile.login_alias).TempToken
         except NeoProfile.DoesNotExist:
-            return super(NeoTokenGenerator).make_token(user)
+            return super(NeoTokenGenerator, self).make_token(user)
 
     def check_token(self, user, token):
         try:

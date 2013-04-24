@@ -1,3 +1,5 @@
+import os
+from os import path
 from functools import reduce
 from optparse import make_option
 from textwrap import dedent
@@ -12,10 +14,12 @@ class Command(NoArgsCommand):
     help = dedent("""\
         Export members as XML for the CIDB Data Load Tool.
 
-        By default, only members without existing NeoProfiles are exported.""")
+        By default, only members without existing NeoProfiles are exported.
+
+        Usage: members_to_cidb_dataloadtool alias_filepath [options]""")
 
     option_list = list(NoArgsCommand.option_list) + [
-        make_option('-f', '--file', dest='file', help='Output file (default: standard output)'),
+        make_option('-f', '--file', dest='filepath', help='Output file (default: standard output)', metavar='FILE'),
         make_option('-p', '--pretty-print', dest='pretty_print', action='store_true', default=False,
                     help='Enable pretty-printing.'),
         make_option('-a', '--all', dest='pretty_print', action='store_true', default=False,
@@ -24,12 +28,21 @@ class Command(NoArgsCommand):
                     help='Provide a password-setting callback, in "some.module:some.function" format.'),
     ]
 
-    def handle_noargs(self, filename=None, pretty_print=False, all=False, password_callback=None, **options):
-        output = self.stdout if filename is None else open(filename)
+    def handle(self, alias_filepath, filepath=None, pretty_print=False, all=False, password_callback=None, **options):
+        for p in (alias_filepath, filepath):
+            if p:
+                if not path.isdir(path.dirname(p)):
+                    raise Exception("Output directory %s does not exist." % p)
+                elif not os.access(path.dirname(p), os.W_OK):
+                    raise Exception("Output directory %s does not have write access." % p)
+
         members = self.get_members(include_all=all)
         callback = None if password_callback is None else self.load_callback(password_callback)
 
-        dataloadtool_export(output, members, password_callback=callback, pretty_print=pretty_print)
+        with open(filepath, 'w') if filepath else self.stdout as output:
+            with open(alias_filepath, 'w') as alias_output:
+                dataloadtool_export(output, alias_output, members,
+                                    password_callback=callback, pretty_print=pretty_print)
 
     def load_callback(self, password_callback):
         """
@@ -59,7 +72,4 @@ class Command(NoArgsCommand):
         """
         Return the members to export.
         """
-        qs = Member.objects.all() if include_all else Member.objects.filter(neoprofile__isnull=True)
-        # Important: The iterator() call prevents memory usage from growing out
-        # of control, when exporting many members. Don't remove it accidentally.
-        return qs.iterator()
+        return Member.objects.all() if include_all else Member.objects.filter(neoprofile__isnull=True)

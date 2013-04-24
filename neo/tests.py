@@ -1,8 +1,9 @@
 # encoding: utf-8
 import re
 import time
-from StringIO import StringIO
+from os import path
 from datetime import timedelta, date
+from io import BytesIO
 
 from lxml import etree, objectify
 
@@ -333,6 +334,8 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         self.maxDiff = None  # For XML document diffs.
         self.consumers_schema = dataloadtool_schema('Consumers.xsd')
         self.parser = objectify.makeparser(schema=self.consumers_schema)
+        self.test_output_path = path.join(path.dirname(__file__), 'test.out')
+        self.test_output_alias_path = path.join(path.dirname(__file__), 'test_alias.out')
 
     def assertValidates(self, xml):
         """
@@ -352,9 +355,11 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
 
         :return: Validated Consumers `objectify` tree.
         """
-        sio = StringIO()
-        dataloadtool_export(sio, *args, **kwargs)
+        sio = BytesIO()
+        sio2 = BytesIO()
+        dataloadtool_export(sio, sio2, *args, **kwargs)
         xml = sio.getvalue()
+        sio.close()
         self.assertValidates(xml)
 
         consumers = objectify.fromstring(xml, self.parser)
@@ -399,7 +404,7 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
             ),
         )
         useraccount = E.UserAccount(
-            E.LoginCredentials(E.LoginName(member.username), E.Password('password')),
+            E.LoginCredentials(E.LoginName(member.username)),
         )
         return E.Consumer(consumerprofile, preferences, useraccount, **kwargs)
 
@@ -409,6 +414,9 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
 
         :rtype: `objectify` tree
         """
+        from operator import attrgetter
+        members.sort(key=attrgetter('username'))
+
         E = objectify.ElementMaker(annotate=False)
         # The Consumer records must be uniquely numbered to be valid: test that
         # we're numbering them sequentially.
@@ -423,8 +431,10 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         members = [self.create_member_partial(commit=False), self.create_member_partial(commit=False)]
         members[0].gender = 'F'
         members[1].gender = 'M'
+        members[0].save()
+        members[1].save()
 
-        consumers = self._dataloadtool_export(members)
+        consumers = self._dataloadtool_export(Member.objects.filter(pk__in=(members[0].pk, members[1].pk)))
         self.assertEqual(
             objectify.dump(self.expected_consumers(members)),
             objectify.dump(consumers))
@@ -436,8 +446,9 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         member = self.create_member_partial(commit=False)
         member.gender = 'F'
         member.first_name = u'fïrstnâmé'
+        member.save()
 
-        consumers = self._dataloadtool_export([member])
+        consumers = self._dataloadtool_export(Member.objects.filter(pk=member.pk))
         self.assertEqual(
             objectify.dump(self.expected_consumers([member])),
             objectify.dump(consumers))
@@ -449,26 +460,29 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         # One member with a password, and one without.
         m1 = self.create_member_partial(commit=False)
         m2 = self.create_member_partial(commit=False)
-        del m2.raw_password  # Make sure that an entirely missing Password element is handled correctly.
         m1.gender = 'F'
         m2.gender = 'M'
+        m1.save()
+        m2.save()
 
         expected = self.expected_consumers([m1, m2])
         expected.Consumer[0].UserAccount.LoginCredentials.Password = 'fnord'
-        del expected.Consumer[1].UserAccount.LoginCredentials.Password
+        #del expected.Consumer[1].UserAccount.LoginCredentials.Password
         objectify.deannotate(expected, cleanup_namespaces=True)
 
         def mock_password(given_member):
             # XXX: Unsaved objects compare equal by default, so lookup by id instead.
-            passwords = {id(m1): 'fnord', id(m2): None}
-            self.assertIn(id(given_member), passwords,
+            passwords = {m1.username: 'fnord', m2.username: None}
+            self.assertIn(given_member.username, passwords,
                           'Called with unexpected member: {0!r}'.format(given_member))
-            return passwords[id(given_member)]
+            return passwords[given_member.username]
 
-        consumers = self._dataloadtool_export([m1, m2], password_callback=mock_password)
+        consumers = self._dataloadtool_export(Member.objects.filter(pk__in=(m1.pk, m2.pk)),
+                                              password_callback=mock_password)
         self.assertEqual(
             objectify.dump(expected),
             objectify.dump(consumers))
+
 
 class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
     """
@@ -479,18 +493,20 @@ class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
         super(DataLoadToolExportCommandTestCase, self).setUp()
         self.command = management.load_command_class('neo', 'members_to_cidb_dataloadtool')
         self.consumers_parser = objectify.makeparser(schema=dataloadtool_schema('Consumers.xsd'))
+        self.test_output_path = path.join(path.dirname(__file__), 'test.out')
+        self.test_output_alias_path = path.join(path.dirname(__file__), 'test_alias.out')
 
     def _call_command(self, *args, **kwargs):
         """
         Call the command, and return standard output.
         """
-        sio = StringIO()
-        management.call_command('members_to_cidb_dataloadtool', stdout=sio, *args, **kwargs)
-        return sio.getvalue()
+        sio = open(self.test_output_path, 'w')
+        management.call_command('members_to_cidb_dataloadtool', alias_filepath=self.test_output_alias_path, stdout=sio, *args, **kwargs)
+        return open(self.test_output_path).read()
 
     def _call_command_validated(self, *args, **kwargs):
         """
-        Like `_call_command()`, but parse the result into a validated `objectify` tree.
+        Like `_call_commandalias_filepath()`, but parse the result into a validated `objectify` tree.
         """
         xml = self._call_command(*args, **kwargs)
         consumers = objectify.fromstring(xml, self.consumers_parser)
