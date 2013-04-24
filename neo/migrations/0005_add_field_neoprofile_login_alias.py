@@ -9,14 +9,14 @@ class Migration(SchemaMigration):
 
     def forwards(self, orm):
         # Adding field 'NeoProfile.login_alias'
-        db.add_column('neo_neoprofile', 'login_alias',
-                      self.gf('django.db.models.fields.CharField')(null=True, unique=True, max_length=50),
-                      keep_default=False)
+        db.alter_column('neo_neoprofile', 'login_alias',
+                        self.gf('django.db.models.fields.CharField')(null=False, unique=True, max_length=50))
 
 
     def backwards(self, orm):
         # Deleting field 'NeoProfile.login_alias'
-        db.delete_column('neo_neoprofile', 'login_alias')
+        db.alter_column('neo_neoprofile', 'login_alias',
+                        self.gf('django.db.models.fields.CharField')(null=True, unique=True, max_length=50))
 
 
     models = {

@@ -13,7 +13,7 @@ class Migration(DataMigration):
         transaction.commit_unless_managed()
 
     def backwards(self, orm):
-        orm['neo.NeoProfile'].objects.all().update(login_alias='')
+        orm['neo.NeoProfile'].objects.all().update(login_alias=None)
 
     models = {
         'auth.group': {
