@@ -229,6 +229,16 @@ original_member_full_clean = Member.full_clean
 
 def clean_member(member):
     original_member_full_clean(member)
+
+    # check completeness of member
+    if not member.is_profile_complete:
+        member.is_profile_complete = True
+        required_fields = preferences.RegistrationPreferences.required_fields
+        for name in required_fields:
+            if not getattr(member, name, None):
+                member.is_profile_complete = False
+                break
+
     # only create/update consumer if the member is complete
     if member.is_profile_complete:
         # attempt to store the data on Neo in order to validate it
@@ -252,18 +262,6 @@ original_member_save = Member.save
 
 
 def save_member(member, *args, **kwargs):
-    '''
-    NB: Keep this in sync with changes to foundry.models.Member
-    '''
-    # START - copied from foundry
-    member.is_profile_complete = True
-    required_fields = preferences.RegistrationPreferences.required_fields
-    for name in required_fields:
-        if not getattr(member, name, None):
-            member.is_profile_complete = False
-            break
-    # END
-
     if getattr(member, 'need_to_clean_member', True):
         member.full_clean()
         member.need_to_clean_member = True
@@ -274,7 +272,7 @@ def save_member(member, *args, **kwargs):
         # stash fields, clearing them if we are not using MCAL, and reassign them after save
         stashed_fields = stash_neo_fields(member, clear=clear_fields)
 
-    super(Member, member).save(*args, **kwargs)
+    original_member_save(member, *args, **kwargs)
 
     if stash_fields:
         if clear_fields:
@@ -291,14 +289,6 @@ def save_member(member, *args, **kwargs):
         member.neoprofile.save()
     except NeoProfile.DoesNotExist:
         pass
-
-    # START - copied from foundry
-    if not member.image:
-        # Set a default avatar
-        avatars = DefaultAvatar.objects.all().order_by('?')
-        if avatars.exists():
-            member.image = avatars[0].image
-    # END
 
 
 def load_consumer(sender, *args, **kwargs):
