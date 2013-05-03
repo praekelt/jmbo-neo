@@ -1,5 +1,7 @@
 import warnings
 from StringIO import StringIO
+import random
+import string
 
 from lxml import etree, objectify
 
@@ -9,12 +11,10 @@ from django.contrib.auth.signals import user_logged_out, user_logged_in
 from django.db.models import signals
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.contrib.auth.hashers import make_password
 from django.conf import settings
 
 from preferences import preferences
 from foundry.models import Member, DefaultAvatar
-from social_auth.db.django_models import UserSocialAuth
 
 from neo import api
 from neo.utils import ConsumerWrapper
@@ -31,13 +31,35 @@ class NeoProfile(models.Model):
     with Neo integration, user.username = login_alias for all members.
     '''
     login_alias = models.CharField(max_length=50, unique=True)
+    '''
+    We have to do this so that we can use MCAL without storing our users' passwords
+    in plain text
+    '''
+    password = models.CharField(max_length=50)
+
+    @staticmethod
+    def generate_password(length=16, chars=(string.digits + string.uppercase + string.lowercase)):
+        """
+        Generate a random new password (NOT cryptographically secure).
+
+        (Note that CIDB requires a minimum password length of 8.)
+        """
+        return ''.join(random.choice(chars) for _ in range(length))
+
+    def reset_password(self, new_password=None):
+        if new_password:
+            self.password = new_password
+        else:
+            self.password = NeoProfile.generate_password()
+        api.change_password(self.login_alias, new_password,
+                            token=api.get_forgot_password_token(self.login_alias).TempToken)
+        self.save()
 
     def save(self, *args, **kwargs):
-        if not self.login_alias:
-            '''
-            Always store login_alias in lowercase to be able to enforce uniqueness.
-            '''
-            self.login_alias = self.user.username.lower()
+        '''
+        Always store login_alias in lowercase to be able to enforce uniqueness.
+        '''
+        self.login_alias = self.login_alias.lower()
         super(NeoProfile, self).save(*args, **kwargs)
 
 
@@ -71,29 +93,15 @@ def notify_logout(sender, **kwargs):
 
 def neo_login(sender, **kwargs):
     try:
-        user = kwargs['user']
-        if user.has_usable_password():  # for normal members
-            kwargs['request'].session['raw_password'] = user.raw_password
-        else:  # members signed up via Facebook/other
-            social = user.social_auth.all()[:1]
-            if social:
-                kwargs['request'].session['raw_password'] = social[0].uid
-                user.raw_password = social[0].uid
-            else:
-                raise UserSocialAuth.DoesNotExist
         # check that neo profile exists - throws DoesNotExist if there is no profile
-        user.neoprofile
+        neo_profile = kwargs['user'].neoprofile
         # Authenticate via Neo in addition to Django
-        api.authenticate(user.neoprofile.login_alias, user.raw_password)
+        api.authenticate(neo_profile.login_alias, neo_profile.password)
     except NeoProfile.DoesNotExist:
         try:
-            user.save()
+            kwargs['user'].save()
         except ValidationError, e:
             warnings.warn("Consumer could not be created via Neo - %s" % str(e))
-    except AttributeError:
-        warnings.warn("User was not logged in via Neo - raw password not available")
-    except UserSocialAuth:
-        warnings.warn("User was not logged in via Neo - the user does not have a usable password or social authentication id.")
 
 user_logged_in.connect(neo_login)
 user_logged_out.connect(notify_logout)
@@ -123,7 +131,7 @@ def stash_neo_fields(member, clear=False):
     return stashed_fields
 
 
-def wrap_member(member, login_alias=None):
+def wrap_member(member, login_alias=None, password=None):
     """
     Return a `ConsumerWrapper` reflecting the given `Member`.
     """
@@ -134,12 +142,9 @@ def wrap_member(member, login_alias=None):
     # member.username.lower() is not guaranteed to be unique
     if login_alias:
         wrapper.set_username(login_alias)
-    else:
-        wrapper.set_username(member.username.lower())
-    # A raw_password is not always set (for example, when exporting members
-    # from the command line).
-    if getattr(member, 'raw_password', None):
-        wrapper.set_password(member.raw_password)
+
+    if password:
+        wrapper.set_password(password)
 
     # assign address
     has_address = False
@@ -149,16 +154,20 @@ def wrap_member(member, login_alias=None):
             break
     if has_address:
         wrapper.set_address(member.address, member.city,
-            member.province, member.zipcode, member.country)
+                            member.province, member.zipcode, member.country)
 
     return wrapper
 
 
 def create_consumer(member):
-    wrapper = wrap_member(member)
+    password = NeoProfile.generate_password()
+    login_alias = member.username.lower()
+    wrapper = wrap_member(member, login_alias=login_alias, password=password)
     consumer_id, uri = api.create_consumer(wrapper.consumer)
     api.complete_registration(consumer_id)  # activates the account
-    return consumer_id
+    # the NeoProfile needs to be saved elsewhere when member has been saved
+    return NeoProfile(user=member, consumer_id=consumer_id,
+                      password=password, login_alias=member.username.lower())
 
 
 def update_consumer(member):
@@ -197,35 +206,31 @@ def update_consumer(member):
         if address_changed:
             if not has_address:
                 wrapper.set_address(old_member.address, old_member.city,
-                    old_member.province, old_member.zipcode, old_member.country,
-                    modify_flag['DELETE'])
+                                    old_member.province, old_member.zipcode, old_member.country,
+                                    modify_flag['DELETE'])
             elif not had_address:
                 wrapper.set_address(member.address, member.city,
-                    member.province, member.zipcode, member.country)
+                                    member.province, member.zipcode, member.country)
             else:
                 wrapper.set_address(member.address, member.city,
-                    member.province, member.zipcode, member.country,
-                    mod_flag=modify_flag['UPDATE'])
+                                    member.province, member.zipcode, member.country,
+                                    mod_flag=modify_flag['UPDATE'])
 
     if not wrapper.is_empty:
         if not wrapper.profile_is_empty:
             wrapper.set_ids_for_profile(api.get_consumer_profile(consumer_id, username=member.neoprofile.login_alias,
-                password=member.raw_password))
-        api.update_consumer(consumer_id, wrapper.consumer, username=member.neoprofile.login_alias, password=member.raw_password)
+                                                                 password=member.neoprofile.password))
+        api.update_consumer(consumer_id, wrapper.consumer, username=member.neoprofile.login_alias, password=member.neoprofile.password)
 
-    # check if password needs to be changed
-    if hasattr(member, 'raw_password'):
-        if hasattr(member, 'old_password'):
-            api.change_password(member.neoprofile.login_alias, member.raw_password, old_password=member.old_password)
-        elif hasattr(member, 'forgot_password_token'):
-            api.change_password(member.neoprofile.login_alias, member.raw_password, token=member.forgot_password_token)
-    return consumer_id
+
+# stash Member.full_clean original
+original_member_full_clean = Member.full_clean
 
 
 def clean_member(member):
-    super(Member, member).full_clean(called_from_child=True)
+    original_member_full_clean(member)
     # only create/update consumer if the member is complete
-    if member.is_profile_complete and hasattr(member, 'raw_password'):
+    if member.is_profile_complete:
         # attempt to store the data on Neo in order to validate it
         try:
             has_neoprofile = bool(member.neoprofile)
@@ -233,14 +238,17 @@ def clean_member(member):
             has_neoprofile = False
 
         if member.pk and has_neoprofile:
-            consumer_id = update_consumer(member)
+            update_consumer(member)
         else:
-            consumer_id = create_consumer(member)
+            member.neoprofile = create_consumer(member)
             if member.pk:
                 # the member had already been logged in by the join form - do the same via Neo
-                consumer_id = api.authenticate(member.username, member.raw_password)
-        member.consumer_id = consumer_id
+                api.authenticate(member.neoprofile.login_alias, member.neoprofile.password)
     member.need_to_clean_member = False
+
+
+# stash Member.save original
+original_member_save = Member.save
 
 
 def save_member(member, *args, **kwargs):
@@ -260,7 +268,7 @@ def save_member(member, *args, **kwargs):
         member.full_clean()
         member.need_to_clean_member = True
 
-    stash_fields = hasattr(member, 'consumer_id')
+    stash_fields = member.is_profile_complete
     clear_fields = not USE_MCAL
     if stash_fields:
         # stash fields, clearing them if we are not using MCAL, and reassign them after save
@@ -276,9 +284,13 @@ def save_member(member, *args, **kwargs):
         # cache the member fields after successfully creating/updating
         cache.set('neo_consumer_%s' % member.pk, stashed_fields, 1200)
 
-    # no consumer on Neo yet
-    if hasattr(member, 'consumer_id'):
-        NeoProfile.objects.get_or_create(user=member, consumer_id=member.consumer_id)
+    # save the member's neo profile if it exists
+    try:
+        # the member hadn't been saved on original assignment
+        member.neoprofile.user = member
+        member.neoprofile.save()
+    except NeoProfile.DoesNotExist:
+        pass
 
     # START - copied from foundry
     if not member.image:
@@ -287,34 +299,6 @@ def save_member(member, *args, **kwargs):
         if avatars.exists():
             member.image = avatars[0].image
     # END
-
-
-def clean_user(user, called_from_child=False):
-    super(User, user).full_clean()
-    try:
-        if not called_from_child and user.neoprofile:
-            # check if password needs to be changed
-            if hasattr(user, 'raw_password'):
-                if hasattr(user, 'old_password'):
-                    api.change_password(user.neoprofile.login_alias, user.raw_password, old_password=user.old_password)
-                elif hasattr(user, 'forgot_password_token'):
-                    api.change_password(user.neoprofile.login_alias, user.raw_password, token=user.forgot_password_token)
-    except NeoProfile.DoesNotExist:
-        pass
-
-    user.need_to_clean_user = False
-
-
-def save_user(user, *args, **kwargs):
-    try:
-        if not isinstance(user, Member) and user.neoprofile:
-            if getattr(user, 'need_to_clean_user', True):
-                user.full_clean()
-                user.need_to_clean_user = True
-    except NeoProfile.DoesNotExist:
-        pass
-
-    super(User, user).save(*args, **kwargs)
 
 
 def load_consumer(sender, *args, **kwargs):
@@ -345,20 +329,6 @@ def load_consumer(sender, *args, **kwargs):
         except NeoProfile.DoesNotExist:
             pass
 signals.post_init.connect(load_consumer, sender=Member)
-
-
-def set_password(user, raw_password, old_password=None):
-    '''
-    Store the clear text password on a user, thus making
-    it accessible by Neo.
-    '''
-    try:
-        if user.neoprofile and old_password:
-            user.old_password = old_password
-    except NeoProfile.DoesNotExist:
-        pass
-    user.raw_password = raw_password
-    user.password = make_password(raw_password)
 
 
 def dataloadtool_export(output, output_login_alias, members, password_callback=None, pretty_print=False):
@@ -398,17 +368,18 @@ def dataloadtool_export(output, output_login_alias, members, password_callback=N
     for (i, member) in enumerate(members.select_related('neoprofile').order_by('username').iterator()):
         # Resolve duplicate usernames, or use available login_alias
         try:
-            wrapper = wrap_member(member, login_alias=member.neoprofile.login_alias)
+            wrapper = wrap_member(member, login_alias=member.neoprofile.login_alias, password=member.neoprofile.password)
         except (NeoProfile.DoesNotExist, AttributeError):
+            password = NeoProfile.generate_password()
             if member.username.lower() == last_username:
                 # append part of timestamp to username to make it unique
                 timestamp = str(int(time.time() * 1000000))[-10:]
                 login_alias = "%s%s" % (member.username, timestamp)
-                wrapper = wrap_member(member, login_alias=login_alias)
-                # write aliases to file
-                output_login_alias.write('"%s","%s"\n' % (member.username, login_alias))
             else:
-                wrapper = wrap_member(member)
+                login_alias = member.username
+            wrapper = wrap_member(member, login_alias=login_alias, password=password)
+            # write aliases and passwords to file
+            output_login_alias.write('"%s","%s","%s"\n' % (member.username, login_alias, password))
         last_username = member.username.lower()
 
         elem = etree_from_gds(wrapper.consumer)
@@ -431,10 +402,7 @@ def dataloadtool_export(output, output_login_alias, members, password_callback=N
 
 
 '''
-Patch User and Member
+Patch Member
 '''
-User.set_password = set_password
-User.save = save_user
-User.full_clean = clean_user
 Member.save = save_member
 Member.full_clean = clean_member
