@@ -102,11 +102,6 @@ class _MemberTestCase(object):
 
 class NeoTestCase(_MemberTestCase, TestCase):
 
-    def login_basic(self, member):
-        Session.objects.all().delete()
-        settings.AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
-        return self.client.login(username=member.username, password='password')
-
     def test_create_member(self):
         member = self.create_member()
         self.assertEqual(NeoProfile.objects.filter(user=member.id).count(), 1)
@@ -188,17 +183,11 @@ class NeoTestCase(_MemberTestCase, TestCase):
 
     def test_authentication(self):
         member = self.create_member()
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
-        Session.objects.all().delete()
-        settings.AUTHENTICATION_BACKENDS = ('foundry.backends.MultiBackend', )
-        self.assertTrue(self.client.login(username=member.username, password='password'))
-        self.assertTrue(self.login_basic(member))
         self.client.logout()
 
     def test_auto_create_consumer_from_member(self):
         member = self.create_member_without_neo()
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.assertTrue(NeoProfile.objects.filter(user=member).exists())
 
@@ -257,8 +246,8 @@ class NeoTestCase(_MemberTestCase, TestCase):
         member = self.create_member()
         member.username = "%sx" % member.username
         member.save()
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
         self.assertTrue(self.client.login(username=member.username, password='password'))
+        # check that consumer update works
         member.first_name = "%sx" % member.first_name
         member.save()
 

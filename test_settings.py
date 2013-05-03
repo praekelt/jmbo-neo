@@ -19,7 +19,7 @@ CACHES = {
 }
 
 AUTHENTICATION_BACKENDS = (
-    'neo.backends.NeoMultiBackend',
+    'foundry.backends.MultiBackend',
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -28,7 +28,6 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'neo.middleware.NeoMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.transaction.TransactionMiddleware',
 )
