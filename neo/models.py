@@ -1,8 +1,7 @@
 import warnings
 from StringIO import StringIO
-from contextlib import contextmanager
 
-from lxml import etree
+from lxml import etree, objectify
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -17,7 +16,6 @@ from preferences import preferences
 from foundry.models import Member, DefaultAvatar
 from social_auth.db.django_models import UserSocialAuth
 
-import neo.xml
 from neo import api
 from neo.utils import ConsumerWrapper
 from neo.constants import modify_flag
@@ -27,6 +25,20 @@ class NeoProfile(models.Model):
     user = models.OneToOneField(User)
     # the Neo consumer id used in API requests
     consumer_id = models.PositiveIntegerField(primary_key=True)
+    '''
+    The login_alias is for the benefit of exporting existing users with
+    usernames that clash without case-sensitivity. If a site was launched
+    with Neo integration, user.username = login_alias for all members.
+    '''
+    login_alias = models.CharField(max_length=50, unique=True)
+
+    def save(self, *args, **kwargs):
+        if not self.login_alias:
+            '''
+            Always store login_alias in lowercase to be able to enforce uniqueness.
+            '''
+            self.login_alias = self.user.username.lower()
+        super(NeoProfile, self).save(*args, **kwargs)
 
 
 '''
@@ -36,7 +48,7 @@ NB. Password is a special case and is handled separately
 NB. Address, city and province are also special cases
 '''
 NEO_ATTR = frozenset((
-    'username', 'first_name', 'last_name', 'dob',
+    'first_name', 'last_name', 'dob',
     'email', 'mobile_number', 'receive_sms',
     'receive_email', 'country', 'gender'))
 
@@ -72,7 +84,7 @@ def neo_login(sender, **kwargs):
         # check that neo profile exists - throws DoesNotExist if there is no profile
         user.neoprofile
         # Authenticate via Neo in addition to Django
-        api.authenticate(user.username, user.raw_password)
+        api.authenticate(user.neoprofile.login_alias, user.raw_password)
     except NeoProfile.DoesNotExist:
         try:
             user.save()
@@ -111,13 +123,19 @@ def stash_neo_fields(member, clear=False):
     return stashed_fields
 
 
-def wrap_member(member):
+def wrap_member(member, login_alias=None):
     """
     Return a `ConsumerWrapper` reflecting the given `Member`.
     """
     wrapper = ConsumerWrapper()
     for a in NEO_ATTR:
         getattr(wrapper, "set_%s" % a)(getattr(member, a))
+    # Use a login_alias instead if specified
+    # member.username.lower() is not guaranteed to be unique
+    if login_alias:
+        wrapper.set_username(login_alias)
+    else:
+        wrapper.set_username(member.username.lower())
     # A raw_password is not always set (for example, when exporting members
     # from the command line).
     if getattr(member, 'raw_password', None):
@@ -162,45 +180,45 @@ def update_consumer(member):
                 else:
                     getattr(wrapper, "set_%s" % k)(current, mod_flag=modify_flag['UPDATE'])
 
-    # check if address needs to change
-    has_address = False
-    had_address = False
-    address_changed = False
-    for k in ADDRESS_FIELDS:
-        current = getattr(member, k, None)
-        old = old_member.get(k, None)
-        if current:
-            has_address = True
-        if old:
-            had_address = True
-        if current != old:
-            address_changed = True
-    # update address accordingly
-    if address_changed:
-        if not has_address:
-            wrapper.set_address(old_member.address, old_member.city,
-                old_member.province, old_member.zipcode, old_member.country,
-                modify_flag['DELETE'])
-        elif not had_address:
-            wrapper.set_address(member.address, member.city,
-                member.province, member.zipcode, member.country)
-        else:
-            wrapper.set_address(member.address, member.city,
-                member.province, member.zipcode, member.country,
-                mod_flag=modify_flag['UPDATE'])
+        # check if address needs to change
+        has_address = False
+        had_address = False
+        address_changed = False
+        for k in ADDRESS_FIELDS:
+            current = getattr(member, k, None)
+            old = old_member.get(k, None)
+            if current:
+                has_address = True
+            if old:
+                had_address = True
+            if current != old:
+                address_changed = True
+        # update address accordingly
+        if address_changed:
+            if not has_address:
+                wrapper.set_address(old_member.address, old_member.city,
+                    old_member.province, old_member.zipcode, old_member.country,
+                    modify_flag['DELETE'])
+            elif not had_address:
+                wrapper.set_address(member.address, member.city,
+                    member.province, member.zipcode, member.country)
+            else:
+                wrapper.set_address(member.address, member.city,
+                    member.province, member.zipcode, member.country,
+                    mod_flag=modify_flag['UPDATE'])
 
     if not wrapper.is_empty:
         if not wrapper.profile_is_empty:
-            wrapper.set_ids_for_profile(api.get_consumer_profile(consumer_id, username=member.username, \
+            wrapper.set_ids_for_profile(api.get_consumer_profile(consumer_id, username=member.neoprofile.login_alias,
                 password=member.raw_password))
-        api.update_consumer(consumer_id, wrapper.consumer, username=member.username, password=member.raw_password)
+        api.update_consumer(consumer_id, wrapper.consumer, username=member.neoprofile.login_alias, password=member.raw_password)
 
     # check if password needs to be changed
     if hasattr(member, 'raw_password'):
         if hasattr(member, 'old_password'):
-            api.change_password(member.username, member.raw_password, old_password=member.old_password)
+            api.change_password(member.neoprofile.login_alias, member.raw_password, old_password=member.old_password)
         elif hasattr(member, 'forgot_password_token'):
-            api.change_password(member.username, member.raw_password, token=member.forgot_password_token)
+            api.change_password(member.neoprofile.login_alias, member.raw_password, token=member.forgot_password_token)
     return consumer_id
 
 
@@ -278,9 +296,9 @@ def clean_user(user, called_from_child=False):
             # check if password needs to be changed
             if hasattr(user, 'raw_password'):
                 if hasattr(user, 'old_password'):
-                    api.change_password(user.username, user.raw_password, old_password=user.old_password)
+                    api.change_password(user.neoprofile.login_alias, user.raw_password, old_password=user.old_password)
                 elif hasattr(user, 'forgot_password_token'):
-                    api.change_password(user.username, user.raw_password, token=user.forgot_password_token)
+                    api.change_password(user.neoprofile.login_alias, user.raw_password, token=user.forgot_password_token)
     except NeoProfile.DoesNotExist:
         pass
 
@@ -343,24 +361,70 @@ def set_password(user, raw_password, old_password=None):
     user.password = make_password(raw_password)
 
 
-def dataloadtool_export(output, members, pretty_print=False):
+def dataloadtool_export(output, output_login_alias, members, password_callback=None, pretty_print=False):
     """
     Export the given members as XML input for the CIDB Data Load Tool.
 
     :param output: File-like object to write to.
-    :param members: Iterator of members to export. If this is a large queryset,
+    :param members: Queryset of members to export. If this is a large queryset,
         consider using `iterator()` on it, to avoid excessive caching.
+
+    :param password_callback:
+        If supplied, use this function to set or generate new passwords as part
+        of the export. This can be used, for example, to port member passwords
+        from another source into CIDB.
+
+        The function will be passed each `Member` in turn, and should return
+        either a new (raw, unhashed) password, or `None`, to not include a
+        password in the export. (To preserve what the default exported password
+        would be, the function can explicitly return the member's
+        `raw_password`, if it is set.)
     """
+    # XXX: We take advantage of the existing ConsumerWrapper logic to construct
+    # a GeneratedsSuper instance, which we then convert to lxml for further
+    # manipulation. Once ConsumerWrapper (or its replacement) can give us a
+    # lxml tree directly, we can skip this step.
     def etree_from_gds(gds):
         sio = StringIO()
         gds.export(sio, 0, pretty_print=False)
         return etree.fromstring(sio.getvalue())
+    password_path = objectify.ObjectPath('Consumer.UserAccount.LoginCredentials.Password')
 
     output.write('<Consumers>\n')
-    for (i, member) in enumerate(members):
-        wrapper = wrap_member(member)
+    last_username = ''
+    import time
+    # Important: The iterator() call prevents memory usage from growing out
+    # of control, when exporting many members. Don't remove it accidentally.
+    for (i, member) in enumerate(members.select_related('neoprofile').order_by('username').iterator()):
+        # Resolve duplicate usernames, or use available login_alias
+        try:
+            wrapper = wrap_member(member, login_alias=member.neoprofile.login_alias)
+        except (NeoProfile.DoesNotExist, AttributeError):
+            if member.username.lower() == last_username:
+                # append part of timestamp to username to make it unique
+                timestamp = str(int(time.time() * 1000000))[-10:]
+                login_alias = "%s%s" % (member.username, timestamp)
+                wrapper = wrap_member(member, login_alias=login_alias)
+                # write aliases to file
+                output_login_alias.write('"%s","%s"\n' % (member.username, login_alias))
+            else:
+                wrapper = wrap_member(member)
+        last_username = member.username.lower()
+
         elem = etree_from_gds(wrapper.consumer)
         elem.attrib['recordNumber'] = str(i)
+
+        if password_callback is not None:
+            new_password = password_callback(member)
+            if new_password is not None:
+                # Set (or replace) the password.
+                password_path.setattr(elem, new_password)
+                objectify.deannotate(password_path(elem), cleanup_namespaces=True)
+            elif password_path.hasattr(elem):
+                # Clear the existing password element, if one exists.
+                old_password = password_path(elem)
+                old_password.getparent().remove(old_password)
+
         output.write(etree.tostring(elem, pretty_print=pretty_print))
         output.write('\n')
     output.write('</Consumers>\n')

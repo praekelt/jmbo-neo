@@ -1,35 +1,33 @@
 # encoding: utf-8
-import os.path
 import re
 import time
-from StringIO import StringIO
-from datetime import timedelta, date, datetime
+from os import path
+from datetime import timedelta, date
+from io import BytesIO
 
 from lxml import etree, objectify
 
 from django.test import TestCase
-from django.test.client import Client
 from django.utils import timezone
 from django.core import management
 from django.core.cache import cache
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.contrib.sessions.models import Session
-from django.contrib.sites.models import Site
 from django.http import HttpRequest
 from django.utils.importlib import import_module
-from django.contrib.auth import login, get_backends, authenticate
+from django.contrib.auth import login, authenticate
 from django.contrib.auth.models import User
 from django.db.models.fields import FieldDoesNotExist
 from django.contrib.auth.hashers import make_password
 from django.db import connection, transaction
 
-from foundry.models import Member, Country, RegistrationPreferences
-from competition.models import Competition
+from foundry.models import Member, Country
 
 from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS, dataloadtool_export
 from neo.forms import NeoTokenGenerator
 from neo import api, constants
+from neo.xml import AnswerType
 from neo.utils import BRAND_ID, PROMO_CODE, ConsumerWrapper, dataloadtool_schema
 
 
@@ -191,13 +189,6 @@ class NeoTestCase(_MemberTestCase, TestCase):
         self.assertTrue(self.login_basic(member))
         self.client.logout()
 
-    def test_auto_create_member_from_consumer(self):
-        member = self.create_member()
-        Member.objects.filter(username=member.username).delete()
-        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
-        self.assertTrue(self.client.login(username=member.username, password='password'))
-        self.assertTrue(Member.objects.filter(username=member.username).exists())
-
     def test_auto_create_consumer_from_member(self):
         '''
         Insert new member directly into db to avoid patched Member/User methods
@@ -289,10 +280,53 @@ class NeoTestCase(_MemberTestCase, TestCase):
         member.save()
         self.assertTrue(NeoProfile.objects.filter(user=member).exists())
 
+    def test_add_promo_code(self):
+        '''
+        This test can fail due to the new promo code not having propagated in CIDB.
+        To solve, one can put time.sleep(2) before get_consumer_profile.
+        '''
+        member = self.create_member()
+        api.add_promo_code(member.neoprofile.consumer_id, 'added_promo_code',
+            username=member.username, password='password')
+        #time.sleep(2)
+        consumer = api.get_consumer_profile(member.neoprofile.consumer_id, username=member.username,
+            password='password')
+        self.assertEqual('added_promo_code', consumer.ConsumerProfile.PromoCode)
+
+    def test_add_consumer_preferences(self):
+        '''
+        This test can fail due to the new promo code not having propagated in CIDB.
+        To solve, one can put time.sleep(2) before get_consumer_preferences.
+        '''
+        member = self.create_member()
+        cw = ConsumerWrapper()
+        cw._set_preference(answer=AnswerType(OptionID=2), category_id=10, question_id=112,
+            mod_flag=constants.modify_flag['INSERT'])
+        # the promo code for this particular question is mandatory
+        cw.consumer.Preferences.PromoCode = 'special_preference_promo'
+        api.update_consumer_preferences(member.neoprofile.consumer_id, cw.consumer.Preferences,
+            username=member.username, password='password', category_id=10)
+        #time.sleep(2)
+        prefs = api.get_consumer_preferences(member.neoprofile.consumer_id, username=member.username,
+            password='password', category_id=10)
+        self.assertEqual(prefs.PromoCode, 'special_preference_promo')
+        question = prefs.QuestionCategory[0].QuestionAnswers[0]
+        self.assertEqual(question.QuestionID, 112)
+        self.assertEqual(question.Answer[0].OptionID, 2)
+
+    def test_login_alias(self):
+        member = self.create_member()
+        member.username = "%sx" % member.username
+        member.save()
+        settings.AUTHENTICATION_BACKENDS = ('neo.backends.NeoMultiBackend', )
+        self.assertTrue(self.client.login(username=member.username, password='password'))
+        member.first_name = "%sx" % member.first_name
+        member.save()
+
 
 class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
     """
-    Exporting to the Data Load Tool.
+    Exporting to the Data Load Tool: `dataloadtool_export()`.
     """
 
     def setUp(self):
@@ -300,6 +334,8 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         self.maxDiff = None  # For XML document diffs.
         self.consumers_schema = dataloadtool_schema('Consumers.xsd')
         self.parser = objectify.makeparser(schema=self.consumers_schema)
+        self.test_output_path = path.join(path.dirname(__file__), 'test.out')
+        self.test_output_alias_path = path.join(path.dirname(__file__), 'test_alias.out')
 
     def assertValidates(self, xml):
         """
@@ -312,6 +348,22 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
             self.consumers_schema.validate(tree),
             'Validation failed: {0}'.format(self.consumers_schema.error_log.last_error)
         )
+
+    def _dataloadtool_export(self, *args, **kwargs):
+        """
+        Call `dataloadtool_export()` with the supplied additional arguments.
+
+        :return: Validated Consumers `objectify` tree.
+        """
+        sio = BytesIO()
+        sio2 = BytesIO()
+        dataloadtool_export(sio, sio2, *args, **kwargs)
+        xml = sio.getvalue()
+        sio.close()
+        self.assertValidates(xml)
+
+        consumers = objectify.fromstring(xml, self.parser)
+        return consumers
 
     def expected_consumer(self, member, **kwargs):
         """
@@ -346,13 +398,13 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
                 E.CategoryID(constants.question_category['OPTIN']),
                 E.QuestionAnswers(
                     E.QuestionID(64),
-                    E.Answer(E.OptionID(2), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['EMAIL'])),
-                    E.Answer(E.OptionID(2), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['SMS'])),
+                    E.Answer(E.OptionID(99), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['EMAIL'])),
+                    E.Answer(E.OptionID(99), E.ModifyFlag(constants.modify_flag['INSERT']), E.BrandID(BRAND_ID), E.CommunicationChannel(constants.comm_channel['SMS'])),
                 ),
             ),
         )
         useraccount = E.UserAccount(
-            E.LoginCredentials(E.LoginName(member.username), E.Password('password')),
+            E.LoginCredentials(E.LoginName(member.username)),
         )
         return E.Consumer(consumerprofile, preferences, useraccount, **kwargs)
 
@@ -362,6 +414,9 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
 
         :rtype: `objectify` tree
         """
+        from operator import attrgetter
+        members.sort(key=attrgetter('username'))
+
         E = objectify.ElementMaker(annotate=False)
         # The Consumer records must be uniquely numbered to be valid: test that
         # we're numbering them sequentially.
@@ -376,13 +431,10 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         members = [self.create_member_partial(commit=False), self.create_member_partial(commit=False)]
         members[0].gender = 'F'
         members[1].gender = 'M'
+        members[0].save()
+        members[1].save()
 
-        sio = StringIO()
-        dataloadtool_export(sio, members)
-        xml = sio.getvalue()
-        self.assertValidates(xml)
-
-        consumers = objectify.fromstring(xml, self.parser)
+        consumers = self._dataloadtool_export(Member.objects.filter(pk__in=(members[0].pk, members[1].pk)))
         self.assertEqual(
             objectify.dump(self.expected_consumers(members)),
             objectify.dump(consumers))
@@ -394,15 +446,41 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         member = self.create_member_partial(commit=False)
         member.gender = 'F'
         member.first_name = u'fïrstnâmé'
+        member.save()
 
-        sio = StringIO()
-        dataloadtool_export(sio, [member])
-        xml = sio.getvalue()
-        self.assertValidates(xml)
-
-        consumers = objectify.fromstring(xml, self.parser)
+        consumers = self._dataloadtool_export(Member.objects.filter(pk=member.pk))
         self.assertEqual(
             objectify.dump(self.expected_consumers([member])),
+            objectify.dump(consumers))
+
+    def test_password_callback(self):
+        """
+        `dataloadtool_export()` should use the password callback.
+        """
+        # One member with a password, and one without.
+        m1 = self.create_member_partial(commit=False)
+        m2 = self.create_member_partial(commit=False)
+        m1.gender = 'F'
+        m2.gender = 'M'
+        m1.save()
+        m2.save()
+
+        expected = self.expected_consumers([m1, m2])
+        expected.Consumer[0].UserAccount.LoginCredentials.Password = 'fnord'
+        #del expected.Consumer[1].UserAccount.LoginCredentials.Password
+        objectify.deannotate(expected, cleanup_namespaces=True)
+
+        def mock_password(given_member):
+            # XXX: Unsaved objects compare equal by default, so lookup by id instead.
+            passwords = {m1.username: 'fnord', m2.username: None}
+            self.assertIn(given_member.username, passwords,
+                          'Called with unexpected member: {0!r}'.format(given_member))
+            return passwords[given_member.username]
+
+        consumers = self._dataloadtool_export(Member.objects.filter(pk__in=(m1.pk, m2.pk)),
+                                              password_callback=mock_password)
+        self.assertEqual(
+            objectify.dump(expected),
             objectify.dump(consumers))
 
 
@@ -415,18 +493,20 @@ class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
         super(DataLoadToolExportCommandTestCase, self).setUp()
         self.command = management.load_command_class('neo', 'members_to_cidb_dataloadtool')
         self.consumers_parser = objectify.makeparser(schema=dataloadtool_schema('Consumers.xsd'))
+        self.test_output_path = path.join(path.dirname(__file__), 'test.out')
+        self.test_output_alias_path = path.join(path.dirname(__file__), 'test_alias.out')
 
     def _call_command(self, *args, **kwargs):
         """
         Call the command, and return standard output.
         """
-        sio = StringIO()
-        management.call_command('members_to_cidb_dataloadtool', stdout=sio, *args, **kwargs)
-        return sio.getvalue()
+        sio = open(self.test_output_path, 'w')
+        management.call_command('members_to_cidb_dataloadtool', alias_filepath=self.test_output_alias_path, stdout=sio, *args, **kwargs)
+        return open(self.test_output_path).read()
 
     def _call_command_validated(self, *args, **kwargs):
         """
-        Like `_call_command()`, but parse the result into a validated `objectify` tree.
+        Like `_call_commandalias_filepath()`, but parse the result into a validated `objectify` tree.
         """
         xml = self._call_command(*args, **kwargs)
         consumers = objectify.fromstring(xml, self.consumers_parser)
@@ -488,3 +568,31 @@ class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
         self.assertEqual(
             set(c.ConsumerProfile.FirstName for c in consumers.Consumer),
             set(['foo', 'bar', 'NEO member']))
+
+    @staticmethod
+    def mock_password_callback(member):
+        return 'fnord'
+
+    def test_load_callback(self):
+        """
+        `load_callback()` works.
+        """
+        callback = self.command.load_callback('neo.tests:DataLoadToolExportCommandTestCase.mock_password_callback')
+        self.assertIs(callback, self.mock_password_callback)
+
+    def test_load_callback_error(self):
+        """
+        `load_callback()` raises a descriptive user error for bad names.
+        """
+        examples = [
+            ('', 'Provide a password callback in "some.module:some.function" format.'),
+            (':', 'Provide a password callback in "some.module:some.function" format.'),
+            ('sys:', 'Provide a password callback in "some.module:some.function" format.'),
+            (':map', 'Provide a password callback in "some.module:some.function" format.'),
+            ('sys:foo', "Failed to look up 'foo' on 'sys': 'module' object has no attribute 'foo'"),
+            ('foo:bar', "Failed to import password callback module 'foo': No module named foo"),
+            ('os:path', "Provided password callback is not callable: <module .*>"),
+        ]
+        for (name, message) in examples:
+            with self.assertRaisesRegexp(management.CommandError, message):
+                self.command.load_callback(name)

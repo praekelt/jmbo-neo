@@ -1,17 +1,16 @@
 import pkgutil
-from datetime import date, datetime
+from datetime import datetime
 
 from django.conf import settings
 from lxml import etree
 
 from foundry.models import Country
 
-from neo.constants import country_option_id, address_type, gender, marital_status, \
+from neo.constants import country_option_id, address_type, gender, \
     modify_flag, phone_type, email_category, comm_channel, question_category
 from neo.xml import Consumer, ConsumerProfileType, PreferencesType, UserAccountType, \
     EmailDetailsType, PhoneDetailsType, AnswerType, CategoryType, LoginCredentialsType, \
     QuestionAnswerType, AddressDetailsType
-from neo import api
 
 
 # retrieve the brand id and promo code for the website
@@ -104,13 +103,13 @@ class ConsumerWrapper(object):
         if answers:
             for a in answers:
                 if a.BrandID == brand_id and a.CommunicationChannel == comm_channel:
-                    a.OptionID = 1 if value else 2
+                    a.OptionID = 1 if value else 99  # 99 for 'No response - Jmbo default'
                     a.ModifyFlag = mod_flag
                     updated = True
                     break
         if not updated:
             answer = AnswerType(
-                OptionID=(1 if value else 2),
+                OptionID=(1 if value else 99),
                 BrandID=brand_id,
                 CommunicationChannel=comm_channel
             )
@@ -214,7 +213,7 @@ class ConsumerWrapper(object):
 
     @property
     def gender(self):
-        if self._consumer.ConsumerProfile is not None:
+        if self._consumer.ConsumerProfile is not None and self._consumer.ConsumerProfile.Gender is not None:
             return ('M' if self._consumer.ConsumerProfile.Gender == gender['MALE'] else 'F')
         return None
 
@@ -334,6 +333,39 @@ class ConsumerWrapper(object):
                         email.EmailId = email
                         email.ModifyFlag = mod_flag
                         break
+
+
+class QuestionAnswersWrapper(object):
+    '''
+    A wrapper class to make it easier to construct objects that contain QuestionAnswers
+    '''
+
+    def __init__(self, object_class, promo_code=None):
+        self.object = object_class(PromoCode=promo_code)
+
+    def add_question_answer(self, question_id, category_id, option_id=None, answer_text=None, mod_flag=modify_flag['MODIFY']):
+        obj = self.object
+        answer = AnswerType(OptionID=option_id, AnswerText=answer_text, ModifyFlag=mod_flag)
+        q_category = None
+        has_question = False
+        for cat in obj.QuestionCategory:
+            if cat.CategoryID == category_id:
+                q_category = cat
+                for q in cat.QuestionAnswers:
+                    if q.QuestionID == question_id:
+                        q.add_Answer(answer)
+                        has_question = True
+                        break
+            if q_category:
+                break
+        # if the question category or question does not exist
+        if not has_question:
+            if not q_category:
+                q_category = CategoryType(CategoryID=category_id)
+                obj.add_QuestionCategory(q_category)
+            q_answer = QuestionAnswerType(QuestionID=question_id)
+            q_category.add_QuestionAnswers(q_answer)
+            q_answer.add_Answer(answer)
 
 
 class PythonPackageResolver(etree.Resolver):
