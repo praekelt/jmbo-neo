@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+	<xs:include schemaLocation="DiageoTypes.xsd"></xs:include>
+	<xs:element name="ExtendedOptInPreferences" type="ExtendedOptInPreferencesType">
+
+	</xs:element>
+
+	<xs:complexType name="ExtendedOptInPreferencesType">
+		<xs:sequence>
+			<xs:element name="PromoCode" type="PromoCodeDesc"
+				minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="AcquisitionSource" type="AcquisitionSourceType"
+				minOccurs="0" maxOccurs="1">
+			</xs:element>
+			<xs:element name="QuestionCategory" type="CategoryType"
+				minOccurs="1" maxOccurs="unbounded">
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

@@ -13,23 +13,28 @@ DATABASES = {
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-        'LOCATION': '127.0.0.1:11211',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'KEY_PREFIX': 'neo_test',
     }
 }
+
+AUTHENTICATION_BACKENDS = (
+    'neo.backends.NeoMultiBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',     
+    'neo.middleware.NeoMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.transaction.TransactionMiddleware',
 )
 
-# A tuple of callables that are used to populate the context in RequestContext. 
-# These callables take a request object as their argument and return a 
+# A tuple of callables that are used to populate the context in RequestContext.
+# These callables take a request object as their argument and return a
 # dictionary of items to be merged into the context.
 TEMPLATE_CONTEXT_PROCESSORS = (
     "django.contrib.auth.context_processors.auth",
@@ -72,15 +77,18 @@ INSTALLED_APPS = [
     'foundry',
     'neo',
     'compressor',
+    'social_auth',
 ]
-#'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
+
 NEO = {
-    'URL': 'https://209.207.228.8/neowebservices',
-    'APP_ID': '35001',
+    'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
+    'APP_ID': '',
     'VERSION_ID': '1.3',
-    'PROMO_CODE': 'testPromo',
-    'BRAND_ID': 12,
+    'PROMO_CODE': '',
+    'PASSWORD': '',
+    'BRAND_ID': 0,
     'VERIFY_CERT': False,
+    'USE_MCAL': True,
 }
 
 STATIC_URL = 'static/'

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='jmbo-neo',
-    version='0.2',
+    version='0.3',
     description='Jmbo Neo Web Services integration app.',
     long_description = open('README.rst', 'r').read() + open('AUTHORS.rst', 'r').read() + open('CHANGELOG.rst', 'r').read(),
     author='Praekelt International',
@@ -10,20 +10,16 @@ setup(
     license='BSD',
     url='http://github.com/praekelt/jmbo-neo',
     packages = find_packages(),
-    dependency_links = [
-        'http://github.com/praekelt/jmbo-foundry/tarball/develop/2.6.praekelt#egg=jmbo-foundry-2.6.praekelt',
-        'http://github.com/praekelt/jmbo-competition/tarball/feature/competition_entry_form/2.6.praekelt#egg=jmbo-competition-2.6.praekelt',
-    ],
     install_requires = [
-	'jmbo-foundry',
+        'jmbo-foundry>=1.1.15,<1.2',
         'django-ckeditor',
-        'requests',
+        # jmbo-neo depends on requests.defaults, which requests 1.0.0 removes.
+        'requests<1',
         'lxml',
-        'django>=1.4',
+        'django>=1.4,<1.5',
     ],
     tests_require=[
-	'django-setuptest',
-        'python-memcached',
+        'django-setuptest',
     ],
     test_suite="setuptest.setuptest.SetupTestSuite",
     include_package_data=True,
