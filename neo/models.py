@@ -321,7 +321,7 @@ def load_consumer(sender, *args, **kwargs):
 signals.post_init.connect(load_consumer, sender=Member)
 
 
-def dataloadtool_export(output, output_login_alias, members, password_callback=None, pretty_print=False):
+def dataloadtool_export(output, credentials_output, members, password_callback=None, pretty_print=False):
     """
     Export the given members as XML input for the CIDB Data Load Tool.
 
@@ -369,7 +369,7 @@ def dataloadtool_export(output, output_login_alias, members, password_callback=N
                 login_alias = member.username
             wrapper = wrap_member(member, login_alias=login_alias, password=password)
             # write aliases and passwords to file
-            output_login_alias.write('"%s","%s","%s"\n' % (member.username, login_alias, password))
+            credentials_output.write('"%s","%s","%s"\n' % (member.username, login_alias, password))
         last_username = member.username.lower()
 
         elem = etree_from_gds(wrapper.consumer)
