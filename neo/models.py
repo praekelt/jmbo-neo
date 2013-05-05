@@ -353,6 +353,8 @@ def dataloadtool_export(output, credentials_output, members, password_callback=N
     output.write('<Consumers>\n')
     last_username = ''
     import time
+    import csv
+    credentials_csv = csv.DictWriter(credentials_output, ['username', 'login_alias', 'password'])
     # Important: The iterator() call prevents memory usage from growing out
     # of control, when exporting many members. Don't remove it accidentally.
     for (i, member) in enumerate(members.select_related('neoprofile').order_by('username').iterator()):
@@ -369,7 +371,11 @@ def dataloadtool_export(output, credentials_output, members, password_callback=N
                 login_alias = member.username
             wrapper = wrap_member(member, login_alias=login_alias, password=password)
             # write aliases and passwords to file
-            credentials_output.write('"%s","%s","%s"\n' % (member.username, login_alias, password))
+            credentials_csv.writerow({
+                'username': member.username.encode('utf-8'),
+                'login_alias': login_alias.encode('utf-8'),
+                'password': password.encode('utf-8')
+            })
         last_username = member.username.lower()
 
         elem = etree_from_gds(wrapper.consumer)
