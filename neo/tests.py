@@ -188,7 +188,7 @@ class NeoTestCase(_MemberTestCase, TestCase):
 
     def test_auto_create_consumer_from_member(self):
         member = self.create_member_without_neo()
-        self.assertTrue(self.client.login(username=member.username, password='password'))
+        member = Member.objects.get(username=member.username)
         self.assertTrue(NeoProfile.objects.filter(user=member).exists())
 
     def test_neoprofile_password_reset(self):
@@ -263,7 +263,7 @@ class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
         self.consumers_schema = dataloadtool_schema('Consumers.xsd')
         self.parser = objectify.makeparser(schema=self.consumers_schema)
         self.test_output_path = path.join(path.dirname(__file__), 'test.out')
-        self.test_output_alias_path = path.join(path.dirname(__file__), 'test_alias.out')
+        self.test_output_credentials_path = path.join(path.dirname(__file__), 'test_alias.out')
 
     def assertValidates(self, xml):
         """
@@ -425,19 +425,19 @@ class DataLoadToolExportCommandTestCase(_MemberTestCase, TestCase):
         self.command = management.load_command_class('neo', 'members_to_cidb_dataloadtool')
         self.consumers_parser = objectify.makeparser(schema=dataloadtool_schema('Consumers.xsd'))
         self.test_output_path = path.join(path.dirname(__file__), 'test.out')
-        self.test_output_alias_path = path.join(path.dirname(__file__), 'test_alias.out')
+        self.test_output_credentials_path = path.join(path.dirname(__file__), 'test_alias.out')
 
     def _call_command(self, *args, **kwargs):
         """
         Call the command, and return standard output.
         """
         sio = open(self.test_output_path, 'w')
-        management.call_command('members_to_cidb_dataloadtool', alias_filepath=self.test_output_alias_path, stdout=sio, *args, **kwargs)
+        management.call_command('members_to_cidb_dataloadtool', credentials_filepath=self.test_output_credentials_path, stdout=sio, *args, **kwargs)
         return open(self.test_output_path).read()
 
     def _call_command_validated(self, *args, **kwargs):
         """
-        Like `_call_commandalias_filepath()`, but parse the result into a validated `objectify` tree.
+        Like `_call_command`, but parse the result into a validated `objectify` tree.
         """
         xml = self._call_command(*args, **kwargs)
         consumers = objectify.fromstring(xml, self.consumers_parser)

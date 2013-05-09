@@ -28,7 +28,7 @@ def clean_join_form(form):
 
 def save_join_form(form, commit=True):
     instance = original_joinform_save(form, commit)
-    if hasattr(form, 'neoprofile'):
+    if hasattr(form, 'neoprofile') and form.neoprofile:
         form.neoprofile.user = instance
         form.neoprofile.save()
     return instance
@@ -62,7 +62,7 @@ try:
 
     def save_reg_join_form(form, commit=True):
         instance = original_regjoinform_save(form, commit)
-        if hasattr(form, 'neoprofile'):
+        if hasattr(form, 'neoprofile') and form.neoprofile:
             form.neoprofile.user = instance
             form.neoprofile.save()
         return instance

@@ -12,6 +12,7 @@ from django.db.models import signals
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.conf import settings
+from django.contrib.auth.models import UserManager
 
 from preferences import preferences
 from foundry.models import Member, DefaultAvatar
@@ -63,6 +64,15 @@ class NeoProfile(models.Model):
         super(NeoProfile, self).save(*args, **kwargs)
 
 
+class NeoMemberManager(UserManager):
+    def get_query_set(self):
+        '''
+        Selects NeoProfile along with Member to avoid an inevitable second query
+        '''
+        qs = super(NeoMemberManager, self).get_query_set()
+        return qs.select_related('neoprofile')
+
+
 '''
 The member attributes that are stored on Neo and in memcached
 NB. These attributes must be required during registration for any Neo app
@@ -86,7 +96,8 @@ USE_MCAL = settings.NEO.get('USE_MCAL', False)
 def notify_logout(sender, **kwargs):
     try:
         neo_profile = kwargs['user'].neoprofile
-        api.logout(neo_profile.consumer_id)
+        if neo_profile:
+            api.logout(neo_profile.consumer_id)
     except NeoProfile.DoesNotExist:
         pass  # figure out something to do here
 
@@ -96,12 +107,10 @@ def neo_login(sender, **kwargs):
         # check that neo profile exists - throws DoesNotExist if there is no profile
         neo_profile = kwargs['user'].neoprofile
         # Authenticate via Neo in addition to Django
-        api.authenticate(neo_profile.login_alias, neo_profile.password)
+        if neo_profile:
+            api.authenticate(neo_profile.login_alias, neo_profile.password)
     except NeoProfile.DoesNotExist:
-        try:
-            kwargs['user'].save()
-        except ValidationError, e:
-            warnings.warn("Consumer could not be created via Neo - %s" % str(e))
+        pass
 
 user_logged_in.connect(neo_login)
 user_logged_out.connect(notify_logout)
@@ -228,7 +237,8 @@ original_member_full_clean = Member.full_clean
 
 
 def clean_member(member):
-    original_member_full_clean(member)
+    if not member.pk:
+        original_member_full_clean(member)
 
     # check completeness of member
     if not member.is_profile_complete:
@@ -284,9 +294,10 @@ def save_member(member, *args, **kwargs):
 
     # save the member's neo profile if it exists
     try:
-        # the member hadn't been saved on original assignment
-        member.neoprofile.user = member
-        member.neoprofile.save()
+        if member.neoprofile:
+            # the member hadn't been saved on original assignment
+            member.neoprofile.user = member
+            member.neoprofile.save()
     except NeoProfile.DoesNotExist:
         pass
 
@@ -295,29 +306,49 @@ def load_consumer(sender, *args, **kwargs):
     instance = kwargs['instance']
     # if the object being instantiated has a pk, i.e. has been saved to the db
     if instance.id:
-        pk = instance.id
-        cache_key = 'neo_consumer_%s' % pk
-        member = cache.get(cache_key, None)
-        try:
-            if member is None:
-                if USE_MCAL:
-                    member = dict((k, getattr(instance, k)) for k in NEO_ATTR.union(ADDRESS_FIELDS))
-                else:
-                    consumer_id = instance.neoprofile.consumer_id
-                    # retrieve consumer from Neo
-                    consumer = api.get_consumer(consumer_id)
-                    wrapper = ConsumerWrapper(consumer=consumer)
-                    member = dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
-                    member.update(wrapper.address)  # special case
-                    # update instance with Neo attributes
-                    for key, val in member.iteritems():
+        cache_key = 'neo_consumer_%s' % instance.id
+        if USE_MCAL:
+            '''
+            All member fields are in our database
+            '''
+            if not cache.has_key(cache_key):
+                member_dict = dict((k, getattr(instance, k)) for k in NEO_ATTR.union(ADDRESS_FIELDS))
+                cache.set(cache_key, member_dict, 1200)
+        else:
+            '''
+            Members with a corresponding consumer in CIDB
+            won't have all fields stored in our database
+            '''
+            try:
+                member_dict = cache.get(cache_key, None)
+                if not member_dict:
+                    neoprofile = instance.neoprofile
+                    if neoprofile:
+                         # retrieve consumer from Neo
+                        consumer = api.get_consumer(instance.neoprofile.consumer_id)
+                        wrapper = ConsumerWrapper(consumer=consumer)
+                        member_dict = dict((k, getattr(wrapper, k)) for k in NEO_ATTR)
+                        member_dict.update(wrapper.address)
+                # update instance with Neo attributes
+                if member_dict:
+                    for key, val in member_dict.iteritems():
                         setattr(instance, key, val)
 
-                # cache the neo member dictionary
-                cache.set(cache_key, member, 1200)
+            except NeoProfile.DoesNotExist:
+                pass
 
+        try:
+            # check if neoprofile is None (this can be the case with 'select_related')
+            if not instance.neoprofile:
+                raise NeoProfile.DoesNotExist
         except NeoProfile.DoesNotExist:
-            pass
+            # create neo profile if all the necessary fields are present
+            if instance.is_profile_complete:
+                try:
+                    instance.save()
+                except ValidationError, e:
+                    warnings.warn("Consumer could not be created via Neo - %s" % str(e))
+
 signals.post_init.connect(load_consumer, sender=Member)
 
 
@@ -402,3 +433,4 @@ Patch Member
 '''
 Member.save = save_member
 Member.full_clean = clean_member
+Member.add_to_class('objects', NeoMemberManager())
