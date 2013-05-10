@@ -20,7 +20,7 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.models import User
 from django.db.models.fields import FieldDoesNotExist
 from django.contrib.auth.hashers import make_password
-from django.db import connection, transaction
+from django.db import connection, transaction, IntegrityError
 
 from foundry.models import Member, Country
 
@@ -35,13 +35,14 @@ class _MemberTestCase(object):
     Test helper for member creation.
     """
 
-    def setUp(self):
-        country = Country.objects.create(
+    @classmethod
+    def setUpClass(cls):  
+        country, created = Country.objects.get_or_create(
             title='United States of America',
             slug='united-states-of-america',
             country_code='US',
         )
-        self.member_attrs = {
+        cls.member_attrs = {
             'first_name': 'firstname',
             'last_name': 'lastname',
             'dob': timezone.now().date() - timedelta(days=22 * 365),
@@ -56,21 +57,26 @@ class _MemberTestCase(object):
         engine = import_module(settings.SESSION_ENGINE)
         store = engine.SessionStore()
         store.save()
-        self.session = store
+        cls.session = store
         required_fields_str = ','.join(['first_name', 'last_name', 'dob',
             'email', 'mobile_number', 'country', 'gender', 'city', 'country',
             'province', 'zipcode', 'address'])
         cursor = connection.cursor()
+        cursor.execute("DELETE FROM preferences_preferences WHERE EXISTS (SELECT * FROM preferences_registrationpreferences WHERE preferences_ptr_id = id)")
         cursor.execute("DELETE FROM preferences_registrationpreferences")
         cursor.execute("INSERT INTO preferences_preferences (id) VALUES (1)")
         cursor.execute("""INSERT INTO preferences_registrationpreferences (preferences_ptr_id,
             raw_required_fields, raw_display_fields, raw_unique_fields, raw_field_order) VALUES (1, %s, '', '', '{}')""",
             [required_fields_str])
-        cursor.execute("INSERT INTO preferences_preferences_sites (preferences_id, site_id) VALUES (1, 1)")
+        try:
+            cursor.execute("INSERT INTO preferences_preferences_sites (preferences_id, site_id) VALUES (1, 1)")
+        except IntegrityError:
+            pass
         transaction.commit_unless_managed()
 
-    def create_member_partial(self, commit=True):
-        attrs = self.member_attrs.copy()
+    @classmethod
+    def create_member_partial(cls, commit=True):
+        attrs = cls.member_attrs.copy()
         del attrs['gender']
         # unique email and username for this test run
         id = "%f" % time.time()
@@ -85,35 +91,42 @@ class _MemberTestCase(object):
             member.save()
         return member
 
-    def create_member(self):
-        member = self.create_member_partial(commit=False)
+    @classmethod
+    def create_member(cls):
+        member = cls.create_member_partial(commit=False)
         member.gender = 'F'
         member.save()
         return member
 
-    def create_member_without_neo(self):
+    @classmethod
+    def create_member_without_neo(cls):
         from neo.models import original_member_save
         stashed_save = Member.save
         Member.save = original_member_save
-        member = self.create_member()
+        member = cls.create_member()
         Member.save = stashed_save
         return member
 
 
 class NeoTestCase(_MemberTestCase, TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        super(NeoTestCase, cls).setUpClass()
+        # create a member for tests that don't change member fields
+        cls.immutable_member = cls.create_member()
+
     def test_create_member(self):
         member = self.create_member()
         self.assertEqual(NeoProfile.objects.filter(user=member.id).count(), 1)
 
     def test_get_member(self):
-        member1 = self.create_member()
         # clear the cached attributes of the newly created member
         cache.clear()
         # retrieve the member from db + Neo
-        member2 = Member.objects.all()[0]
+        member2 = Member.objects.get(username=self.immutable_member.username)
         for key in NEO_ATTR.union(ADDRESS_FIELDS):
-            self.assertEqual(getattr(member1, key), getattr(member2, key))
+            self.assertEqual(getattr(self.immutable_member, key), getattr(member2, key))
 
     def test_update_member(self):
         member = self.create_member()
@@ -172,7 +185,7 @@ class NeoTestCase(_MemberTestCase, TestCase):
         This breaks functionality that relies on authentication occurring before login.
         EDIT: changed jmbo-foundry to authenticate before login
         '''
-        member = self.create_member()
+        member = self.immutable_member
         request = HttpRequest()
         request.session = self.session
         request.COOKIES[settings.SESSION_COOKIE_NAME] = self.session.session_key
@@ -182,7 +195,7 @@ class NeoTestCase(_MemberTestCase, TestCase):
         self.client.logout()
 
     def test_authentication(self):
-        member = self.create_member()
+        member = self.immutable_member
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.client.logout()
 
@@ -194,10 +207,10 @@ class NeoTestCase(_MemberTestCase, TestCase):
     def test_neoprofile_password_reset(self):
         member = self.create_member()
         n_pk = member.neoprofile.pk
-        member.neoprofile.reset_password('password')
-        self.assertEqual(api.authenticate(member.neoprofile.login_alias, 'password'),
+        member.neoprofile.reset_password('password_new')
+        self.assertEqual(api.authenticate(member.neoprofile.login_alias, 'password_new'),
                          member.neoprofile.consumer_id)
-        self.assertEqual(NeoProfile.objects.get(pk=n_pk).password, 'password')
+        self.assertEqual(NeoProfile.objects.get(pk=n_pk).password, 'password_new')
 
     def test_member_create_on_complete(self):
         member = self.create_member_partial()
@@ -213,10 +226,10 @@ class NeoTestCase(_MemberTestCase, TestCase):
         This test can fail due to the new promo code not having propagated in CIDB.
         To solve, one can put time.sleep(2) before get_consumer_profile.
         '''
-        member = self.create_member()
+        member = self.immutable_member
         api.add_promo_code(member.neoprofile.consumer_id, 'added_promo_code',
             username=member.username, password=member.neoprofile.password)
-        time.sleep(5)
+        #time.sleep(5)
         consumer = api.get_consumer_profile(member.neoprofile.consumer_id, username=member.username,
             password=member.neoprofile.password)
         self.assertEqual('added_promo_code', consumer.ConsumerProfile.PromoCode)
@@ -226,7 +239,7 @@ class NeoTestCase(_MemberTestCase, TestCase):
         This test can fail due to the new promo code not having propagated in CIDB.
         To solve, one can put time.sleep(2) before get_consumer_preferences.
         '''
-        member = self.create_member()
+        member = self.immutable_member
         cw = ConsumerWrapper()
         cw._set_preference(answer=AnswerType(OptionID=2), category_id=10, question_id=112,
             mod_flag=constants.modify_flag['INSERT'])
@@ -234,7 +247,7 @@ class NeoTestCase(_MemberTestCase, TestCase):
         cw.consumer.Preferences.PromoCode = 'special_preference_promo'
         api.update_consumer_preferences(member.neoprofile.consumer_id, cw.consumer.Preferences,
             username=member.username, password=member.neoprofile.password, category_id=10)
-        time.sleep(5)
+        #time.sleep(5)
         prefs = api.get_consumer_preferences(member.neoprofile.consumer_id, username=member.username,
             password=member.neoprofile.password, category_id=10)
         self.assertEqual(prefs.PromoCode, 'special_preference_promo')
@@ -250,6 +263,10 @@ class NeoTestCase(_MemberTestCase, TestCase):
         # check that consumer update works
         member.first_name = "%sx" % member.first_name
         member.save()
+
+    def test_logging(self):
+        member = self.create_member()
+
 
 
 class DataLoadToolExportTestCase(_MemberTestCase, TestCase):
