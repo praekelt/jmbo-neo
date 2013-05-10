@@ -273,7 +273,11 @@ original_member_save = Member.save
 
 def save_member(member, *args, **kwargs):
     if getattr(member, 'need_to_clean_member', True):
-        member.full_clean()
+        try:
+            member.full_clean()
+        # save method shouldn't throw a validation error, only clean
+        except ValidationError, e:
+            warnings.warn("Consumer could not be created via Neo - %s" % str(e))
         member.need_to_clean_member = True
 
     stash_fields = member.is_profile_complete
@@ -344,10 +348,7 @@ def load_consumer(sender, *args, **kwargs):
         except NeoProfile.DoesNotExist:
             # create neo profile if all the necessary fields are present
             if instance.is_profile_complete:
-                try:
-                    instance.save()
-                except ValidationError, e:
-                    warnings.warn("Consumer could not be created via Neo - %s" % str(e))
+                instance.save()
 
 signals.post_init.connect(load_consumer, sender=Member)
 
