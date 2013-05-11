@@ -26,6 +26,7 @@ class NeoProfile(models.Model):
     user = models.OneToOneField(User)
     # the Neo consumer id used in API requests
     consumer_id = models.PositiveIntegerField(primary_key=True)
+    created = models.DateTimeField(auto_now_add=True)
     '''
     The login_alias is for the benefit of exporting existing users with
     usernames that clash without case-sensitivity. If a site was launched
