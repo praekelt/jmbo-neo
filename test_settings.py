@@ -81,11 +81,11 @@ INSTALLED_APPS = [
 
 NEO = {
     'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
-    'APP_ID': '',
+    'APP_ID': '67220',
     'VERSION_ID': '1.3',
-    'PROMO_CODE': '',
-    'PASSWORD': '',
-    'BRAND_ID': 0,
+    'PROMO_CODE': 'AFGUI0213IA0059',
+    'PASSWORD': 'PRAGVIPN@67220_12032013',
+    'BRAND_ID': 8,
     'VERIFY_CERT': False,
     'USE_MCAL': True,
 }
