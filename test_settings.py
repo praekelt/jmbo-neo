@@ -19,7 +19,7 @@ CACHES = {
 }
 
 AUTHENTICATION_BACKENDS = (
-    'neo.backends.NeoMultiBackend',
+    'foundry.backends.MultiBackend',
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -28,7 +28,6 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'neo.middleware.NeoMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.transaction.TransactionMiddleware',
 )
@@ -83,7 +82,7 @@ INSTALLED_APPS = [
 NEO = {
     'URL': 'https://neostaging.wsnet.diageo.com/MCAL/MultiChannelWebService.svc',
     'APP_ID': '',
-    'VERSION_ID': '1.3',
+    'VERSION_ID': '',
     'PROMO_CODE': '',
     'PASSWORD': '',
     'BRAND_ID': 0,
