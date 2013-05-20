@@ -14,15 +14,16 @@ original_joinform_save = JoinForm.save
 
 def clean_join_form(form):
     cleaned_data = original_joinform_clean(form)
-    opts = form._meta
-    # Update the model instance with cleaned_data.
-    member = construct_instance(form, form.instance, opts.fields, opts.exclude)
-    member.set_password(form.cleaned_data["password1"])
-    member.full_clean()
-    try:
-        form.neoprofile = member.neoprofile
-    except NeoProfile.DoesNotExist:
-        pass
+    if 'password1' in form.cleaned_data:
+        opts = form._meta
+        # Update the model instance with cleaned_data.
+        member = construct_instance(form, form.instance, opts.fields, opts.exclude)
+        member.set_password(form.cleaned_data["password1"])
+        member.full_clean()
+        try:
+            form.neoprofile = member.neoprofile
+        except NeoProfile.DoesNotExist:
+            pass
     return cleaned_data
 
 
@@ -49,15 +50,16 @@ try:
 
     def clean_reg_join_form(form):
         cleaned_data = original_regjoinform_clean(form)
-        opts = form._meta
-        # Update the model instance with cleaned_data.
-        member = construct_instance(form, form.instance, opts.fields, opts.exclude)
-        member.set_password(form.cleaned_data["password1"])
-        member.full_clean()
-        try:
-            form.neoprofile = member.neoprofile
-        except NeoProfile.DoesNotExist:
-            pass
+        if 'password1' in form.cleaned_data:
+            opts = form._meta
+            # Update the model instance with cleaned_data.
+            member = construct_instance(form, form.instance, opts.fields, opts.exclude)
+            member.set_password(form.cleaned_data["password1"])
+            member.full_clean()
+            try:
+                form.neoprofile = member.neoprofile
+            except NeoProfile.DoesNotExist:
+                pass
         return cleaned_data
 
     def save_reg_join_form(form, commit=True):
