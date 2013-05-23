@@ -16,7 +16,7 @@ class Command(NoArgsCommand):
 
         By default, only members without existing NeoProfiles are exported.
 
-        Usage: members_to_cidb_dataloadtool alias_filepath [options]""")
+        Usage: members_to_cidb_dataloadtool credentials_filepath [options]""")
 
     option_list = list(NoArgsCommand.option_list) + [
         make_option('-f', '--file', dest='filepath', help='Output file (default: standard output)', metavar='FILE'),
@@ -28,9 +28,11 @@ class Command(NoArgsCommand):
                     help='Provide a password-setting callback, in "some.module:some.function" format.'),
     ]
 
-    def handle(self, alias_filepath, filepath=None, pretty_print=False, all=False, password_callback=None, **options):
-        for p in (alias_filepath, filepath):
+    def handle(self, credentials_filepath, filepath=None, pretty_print=False, all=False, password_callback=None, **options):
+        for p in (credentials_filepath, filepath):
             if p:
+                if not path.isabs(p):
+                    p = path.join(os.getenv('PWD'), p)
                 if not path.isdir(path.dirname(p)):
                     raise Exception("Output directory %s does not exist." % p)
                 elif not os.access(path.dirname(p), os.W_OK):
@@ -40,8 +42,8 @@ class Command(NoArgsCommand):
         callback = None if password_callback is None else self.load_callback(password_callback)
 
         with open(filepath, 'w') if filepath else self.stdout as output:
-            with open(alias_filepath, 'w') as alias_output:
-                dataloadtool_export(output, alias_output, members,
+            with open(credentials_filepath, 'w') as credentials_output:
+                dataloadtool_export(output, credentials_output, members,
                                     password_callback=callback, pretty_print=pretty_print)
 
     def load_callback(self, password_callback):

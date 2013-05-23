@@ -1,6 +1,5 @@
-from django.conf.urls.defaults import patterns, url, include
+from django.conf.urls.defaults import patterns, include
 
 urlpatterns = patterns('',
-    (r'^', include('neo.urls')),
-    (r'^', include('competition.urls')),
+    (r'^', include('auth.urls')),
 )
