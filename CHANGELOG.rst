@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.4 (23-05-2013)
+----------------
+#. Use random password for Neo auth instead of actual user password.
+#. Only `Member.full_clean` throws ValidationError, not `Member.save` anymore.
+#. Remove auth backend and middleware. The user's plain text password isn't stashed in the session or on the `member` object anymore.
+#. Add `created` field to `NeoProfile` - useful for checking consumer creation limit (10 000 per day at the moment).
+#. Reduce test time by re-using an immutable member where possible.
+
 0.3 (03-05-2013)
 ----------------
 #. Add a new management command to export members for bulk upload:
