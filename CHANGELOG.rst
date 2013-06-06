@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.4.1 (06-06-2013)
+------------------
+#. Only clean via Neo if no local errors in join form.
+
 0.4 (23-05-2013)
 ----------------
 #. Use random password for Neo auth instead of actual user password.
