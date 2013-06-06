@@ -12,7 +12,7 @@ def patch_join_clean(original_clean):
     @wraps(original_clean)
     def clean_join_form(form):
         cleaned_data = original_clean(form)
-        if 'password1' in form.cleaned_data:
+        if not form._errors and not form.non_field_errors():
             opts = form._meta
             # Update the model instance with cleaned_data.
             member = construct_instance(form, form.instance, opts.fields, opts.exclude)
