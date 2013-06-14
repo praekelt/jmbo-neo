@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.4.2 (14-06-2013)
+------------------
+#. Normalize login_alias, removing bad characters and padding it.
+#. Add a validation module with validators for email, mobile_number and login_alias - to be expanded.
+#. Fix error on `user_logged_out` if there is no authenticated user.
+
 0.4.1 (06-06-2013)
 ------------------
 #. Only clean via Neo if no local errors in join form.

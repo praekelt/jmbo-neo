@@ -1,3 +1,4 @@
+import re
 import pkgutil
 from datetime import datetime
 
@@ -16,6 +17,12 @@ from neo.xml import Consumer, ConsumerProfileType, PreferencesType, UserAccountT
 # retrieve the brand id and promo code for the website
 BRAND_ID = getattr(settings, 'NEO')['BRAND_ID']
 PROMO_CODE = getattr(settings, 'NEO')['PROMO_CODE']
+
+
+def normalize_username(username):
+    normal = re.sub(r'[ +]', '', username.lower())
+    # minimum LoginName length of 4
+    return "%s%s" % (normal, max(0, 4 - len(normal)) * "0")
 
 
 class ConsumerWrapper(object):
