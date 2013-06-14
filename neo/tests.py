@@ -27,7 +27,8 @@ from foundry.models import Member, Country
 from neo.models import NeoProfile, NEO_ATTR, ADDRESS_FIELDS, dataloadtool_export
 from neo import api, constants
 from neo.xml import AnswerType
-from neo.utils import BRAND_ID, PROMO_CODE, ConsumerWrapper, dataloadtool_schema
+from neo.utils import BRAND_ID, PROMO_CODE, ConsumerWrapper, dataloadtool_schema, \
+    normalize_username
 
 
 class _MemberTestCase(object):
@@ -36,7 +37,7 @@ class _MemberTestCase(object):
     """
 
     @classmethod
-    def setUpClass(cls):  
+    def setUpClass(cls):
         country, created = Country.objects.get_or_create(
             title='United States of America',
             slug='united-states-of-america',
@@ -265,8 +266,11 @@ class NeoTestCase(_MemberTestCase, TestCase):
         member.save()
 
     def test_logging(self):
-        member = self.create_member()
+        pass
 
+    def test_username_normalization(self):
+        # username should be lower case, spaces replaces with _, and padded up to len = 4
+        self.assertEqual(normalize_username('T '), 't_00')
 
 
 class DataLoadToolExportTestCase(_MemberTestCase, TestCase):

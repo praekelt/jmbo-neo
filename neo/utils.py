@@ -18,6 +18,12 @@ BRAND_ID = getattr(settings, 'NEO')['BRAND_ID']
 PROMO_CODE = getattr(settings, 'NEO')['PROMO_CODE']
 
 
+def normalize_username(username):
+    normal = username.lower().replace(' ', '_')
+    # minimum LoginName length of 4
+    return "%s%s" % (normal, max(0, 4 - len(normal)) * "0")
+
+
 class ConsumerWrapper(object):
     '''
     A wrapper class that makes it easier to manage a consumer object

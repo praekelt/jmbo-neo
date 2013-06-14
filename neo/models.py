@@ -18,7 +18,7 @@ from preferences import preferences
 from foundry.models import Member, DefaultAvatar
 
 from neo import api
-from neo.utils import ConsumerWrapper
+from neo.utils import ConsumerWrapper, normalize_username
 from neo.constants import modify_flag
 
 
@@ -172,13 +172,13 @@ def wrap_member(member, login_alias=None, password=None):
 
 def create_consumer(member):
     password = NeoProfile.generate_password()
-    login_alias = member.username.lower()
+    login_alias = normalize_username(member.username)
     wrapper = wrap_member(member, login_alias=login_alias, password=password)
     consumer_id, uri = api.create_consumer(wrapper.consumer)
     api.complete_registration(consumer_id)  # activates the account
     # the NeoProfile needs to be saved elsewhere when member has been saved
     return NeoProfile(user=member, consumer_id=consumer_id,
-                      password=password, login_alias=member.username.lower())
+                      password=password, login_alias=login_alias)
 
 
 def update_consumer(member):
@@ -403,6 +403,7 @@ def dataloadtool_export(output, credentials_output, members, password_callback=N
                 login_alias = "%s%s" % (member.username, timestamp)
             else:
                 login_alias = member.username
+            login_alias = normalize_username(login_alias)
             wrapper = wrap_member(member, login_alias=login_alias, password=password)
             # write aliases and passwords to file
             credentials_csv.writerow({
