@@ -269,8 +269,8 @@ class NeoTestCase(_MemberTestCase, TestCase):
         pass
 
     def test_username_normalization(self):
-        # username should be lower case, spaces replaces with _, and padded up to len = 4
-        self.assertEqual(normalize_username('T '), 't_00')
+        # username should be lower case, [ +] replaced with '', and padded up to len = 4
+        self.assertEqual(normalize_username('+T '), 't000')
 
 
 class DataLoadToolExportTestCase(_MemberTestCase, TestCase):

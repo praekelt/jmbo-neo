@@ -1,3 +1,4 @@
+import re
 import pkgutil
 from datetime import datetime
 
@@ -19,7 +20,7 @@ PROMO_CODE = getattr(settings, 'NEO')['PROMO_CODE']
 
 
 def normalize_username(username):
-    normal = username.lower().replace(' ', '_')
+    normal = re.sub(r'[ +]', '', username.lower())
     # minimum LoginName length of 4
     return "%s%s" % (normal, max(0, 4 - len(normal)) * "0")
 
