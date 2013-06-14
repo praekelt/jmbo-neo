@@ -96,7 +96,8 @@ USE_MCAL = settings.NEO.get('USE_MCAL', False)
 
 def notify_logout(sender, **kwargs):
     try:
-        neo_profile = kwargs['user'].neoprofile
+        # user_logged_out can be called without there being a logged in user
+        neo_profile = kwargs['user'].neoprofile if kwargs['user'] else None
         if neo_profile:
             api.logout(neo_profile.consumer_id)
     except NeoProfile.DoesNotExist:
