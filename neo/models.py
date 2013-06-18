@@ -343,15 +343,6 @@ def load_consumer(sender, *args, **kwargs):
             except NeoProfile.DoesNotExist:
                 pass
 
-        try:
-            # check if neoprofile is None (this can be the case with 'select_related')
-            if not instance.neoprofile:
-                raise NeoProfile.DoesNotExist
-        except NeoProfile.DoesNotExist:
-            # create neo profile if all the necessary fields are present
-            if instance.is_profile_complete:
-                instance.save()
-
 signals.post_init.connect(load_consumer, sender=Member)
 
 
