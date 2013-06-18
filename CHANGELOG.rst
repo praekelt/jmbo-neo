@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.4.3 (18-06-2013)
+------------------
+#. Don't create consumer on member load - issue for views with many members and unmigrated accounts.
+
 0.4.2 (14-06-2013)
 ------------------
 #. Normalize login_alias, removing bad characters and padding it.

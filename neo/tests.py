@@ -200,11 +200,6 @@ class NeoTestCase(_MemberTestCase, TestCase):
         self.assertTrue(self.client.login(username=member.username, password='password'))
         self.client.logout()
 
-    def test_auto_create_consumer_from_member(self):
-        member = self.create_member_without_neo()
-        member = Member.objects.get(username=member.username)
-        self.assertTrue(NeoProfile.objects.filter(user=member).exists())
-
     def test_neoprofile_password_reset(self):
         member = self.create_member()
         n_pk = member.neoprofile.pk
