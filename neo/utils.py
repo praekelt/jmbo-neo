@@ -399,10 +399,10 @@ class QuestionAnswersWrapper(object):
                     if q in self.answer_set:
                         # if this is a new question, pad previous answer sets
                         for i in range(self.answer_sets - len(q.Answer)):
-                            q.Answer.insert(0, AnswerType(ModifyFlag=None))
+                            q.Answer.insert(0, AnswerType(ModifyFlag=modify_flag['INSERT']))
                     else:
                         # if this is an existing question, pad current answer set
-                        q.add_Answer(AnswerType(ModifyFlag=None))
+                        q.add_Answer(AnswerType(ModifyFlag=modify_flag['INSERT']))
                     assert self.answer_sets == len(q.Answer)
         self.answer_set.clear()
 
