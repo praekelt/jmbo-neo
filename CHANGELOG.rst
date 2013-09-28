@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.4.4 (28-09-2013)
+------------------
+#. Add `answer_set` to `QuestionAnswerWrapper` for adding answers in bulk.
+
 0.4.3 (18-06-2013)
 ------------------
 #. Don't create consumer on member load - issue for views with many members and unmigrated accounts.
