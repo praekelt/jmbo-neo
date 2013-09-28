@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.4.4.1 (28-09-2013)
+--------------------
+#. Add `ModifyFlag` to empty `Answer` element. Invalid otherwise.
+
 0.4.4 (28-09-2013)
 ------------------
 #. Add `answer_set` to `QuestionAnswerWrapper` for adding answers in bulk.
