@@ -349,6 +349,8 @@ class QuestionAnswersWrapper(object):
 
     def __init__(self, object_class, promo_code=None):
         self.object = object_class(PromoCode=promo_code)
+        self.answer_set = set()
+        self.answer_sets = 0
 
     def add_question_answer(self, question_id, category_id, option_id=None, answer_text=None, mod_flag=modify_flag['MODIFY']):
         obj = self.object
@@ -362,6 +364,7 @@ class QuestionAnswersWrapper(object):
                     if q.QuestionID == question_id:
                         q.add_Answer(answer)
                         has_question = True
+                        self.answer_set.add(q)
                         break
             if q_category:
                 break
@@ -373,6 +376,35 @@ class QuestionAnswersWrapper(object):
             q_answer = QuestionAnswerType(QuestionID=question_id)
             q_category.add_QuestionAnswers(q_answer)
             q_answer.add_Answer(answer)
+            self.answer_set.add(q_answer)
+
+    def end_answer_set(self):
+        '''
+        Pads the current answer set to have empty answers for all
+        unanswered questions. If a new question has been added,
+        pads previous answer sets to have empty answers for the
+        new question. Starts a new answer set.
+        '''
+        self.answer_sets += 1
+        if self.answer_sets == 1:
+            return
+        for cat in self.object.QuestionCategory:
+            for q in cat.QuestionAnswers:
+                if len(q.Answer) == self.answer_sets:
+                    if self.answer_set:
+                        assert q in self.answer_set
+                    continue
+                else:
+                    assert len(q.Answer) < self.answer_sets
+                    if q in self.answer_set:
+                        # if this is a new question, pad previous answer sets
+                        for i in range(self.answer_sets - len(q.Answer)):
+                            q.Answer.insert(0, AnswerType(ModifyFlag=None))
+                    else:
+                        # if this is an existing question, pad current answer set
+                        q.add_Answer(AnswerType(ModifyFlag=None))
+                    assert self.answer_sets == len(q.Answer)
+        self.answer_set.clear()
 
 
 class PythonPackageResolver(etree.Resolver):
