@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.4.5 (23-10-2013)
+------------------
+#. Log all API calls. Uses `neo.api` logger.
+
 0.4.4.1 (28-09-2013)
 --------------------
 #. Add `ModifyFlag` to empty `Answer` element. Invalid otherwise.

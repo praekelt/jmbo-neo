@@ -60,6 +60,7 @@ TEMPLATE_LOADERS = (
 
 INSTALLED_APPS = [
     'atlas',
+    'south',
     'django.contrib.auth',
     'django.contrib.comments',
     'django.contrib.contenttypes',
@@ -90,8 +91,34 @@ NEO = {
     'USE_MCAL': True,
 }
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
+        },
+    },
+    'handlers': {
+        'null': {
+            'level': 'INFO',
+            'class': 'logging.NullHandler',
+            'formatter': 'verbose'
+        }
+    },
+    'loggers': {
+        'neo.api': {
+            'level': 'INFO',
+            'handlers': ['null'],
+            'propagate': False,
+        }
+    },
+}
+
 STATIC_URL = 'static/'
 
 SITE_ID = 1
 
 ROOT_URLCONF = 'neo.test_urls'
+
+SOUTH_TESTS_MIGRATE = False

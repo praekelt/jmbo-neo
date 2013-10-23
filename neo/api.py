@@ -1,4 +1,6 @@
 import base64
+import logging
+import inspect
 import re
 import requests
 from StringIO import StringIO
@@ -16,8 +18,6 @@ try:
     CONFIG = getattr(settings, 'NEO')
     # the base url for Neo services
     BASE_URL = '/'.join((CONFIG['URL'], CONFIG['APP_ID'], CONFIG['VERSION_ID']))
-    # make the request module catch all exceptions
-    requests.defaults.safe_mode = True
     # use basic http authentication
     HEADERS = {'content-type': 'application/xml'}
     if CONFIG.get('USE_MCAL', False):
@@ -33,37 +33,90 @@ except KeyError as e:
     raise exceptions.ImproperlyConfigured("Neo setting %s is missing." % str(e))
 
 
-# Determine the appropriate error
+logger = logging.getLogger(__name__)
+
+
+def log_api_call(function_call_tup=None, log_level=logging.INFO, status_code=200,
+                 exception=None):
+    '''
+    Inspect the call stack frame record to get the function name and
+    arguments. Log this info (with blanked out password) along with
+    the API call's response status code and possibly an exception
+    '''
+    if not function_call_tup:
+        try:
+            function_call_tup = inspect.stack()[1]
+        except IndexError:
+            function_call_tup = (None, ) * 6
+    if function_call_tup[0]:
+        args = inspect.getargvalues(function_call_tup[0])
+        # we don't want passwords in logs
+        locals_copy = args.locals.copy()
+        if 'password' in locals_copy:
+            locals_copy['password'] = '***'
+        arg_str = inspect.formatargvalues(*(args[:-1] + (locals_copy, )))
+    else:
+        arg_str = ''
+    kwargs = {}
+    if log_level == logging.ERROR:
+        kwargs['exc_info'] = exception
+
+    logger.log(log_level, '%(function_name)s%(arg_str)s: %(status_code)s',
+               {'function_name': function_call_tup[3],
+                'arg_str': arg_str, 'status_code': status_code},
+                **kwargs)
+
+
 def _get_error(response):
+    '''
+    Determine the appropriate error
+    '''
+    exception = None
     if response.status_code == 500:
-        return Exception("Neo Web Services not responding")
-    try:
-        neo_resp = parseString(response.content)
-        errors = None
-        if isinstance(neo_resp, ResponseListType):
-            errors = neo_resp.Response
-        elif isinstance(neo_resp, ResponseType):
-            errors = [neo_resp]
-        else:
-            return Exception(response.content)
-        err_msg_list = []
-        for error in errors:
-            if error.ResponseCode == 'INVALID_APPID':
-                return exceptions.ImproperlyConfigured("Neo App ID is invalid.")
-            elif error.ResponseCode == 'INVALID_VERSION':
-                return exceptions.ImproperlyConfigured("Neo API version is invalid.")
-            elif error.ResponseCode == 'BAD_REQUEST' or response.request.method == 'POST' or \
-                response.request.method == 'PUT':
-                err_msg_list.append(_(error.ResponseMessage))
+        exception = Exception("Neo Web Services not responding")
+    else:
+        try:
+            neo_resp = parseString(response.content)
+            errors = None
+            if isinstance(neo_resp, ResponseListType):
+                errors = neo_resp.Response
+            elif isinstance(neo_resp, ResponseType):
+                errors = [neo_resp]
             else:
-                return Exception(response.content)
-        return exceptions.ValidationError(err_msg_list)
-    except GDSParseError:
-        return Exception(response.content)
+                exception = Exception(response.content)
+
+            if not exception:
+                err_msg_list = []
+                for error in errors:
+                    if error.ResponseCode == 'INVALID_APPID':
+                        exception = exceptions.ImproperlyConfigured(
+                            "Neo App ID is invalid."
+                        )
+                    elif error.ResponseCode == 'INVALID_VERSION':
+                        exception = exceptions.ImproperlyConfigured(
+                            "Neo API version is invalid."
+                        )
+                    elif (error.ResponseCode == 'BAD_REQUEST' or
+                          response.request.method == 'POST' or
+                          response.request.method == 'PUT'):
+                        err_msg_list.append(_(error.ResponseMessage))
+                    else:
+                        exception = Exception(response.content)
+                if not exception:
+                    exception = exceptions.ValidationError(err_msg_list)
+        except GDSParseError:
+            exception = Exception(response.content)
+
+    log_api_call(function_call_tup=inspect.stack()[1],
+                 log_level=logging.ERROR,
+                 exception=exception)
+    return exception
 
 
-# create HTTP Authorization header
 def _get_auth_header(username, password, promo_code):
+    '''
+    Create HTTP Authorization header
+    '''
     return 'Basic %s' % base64.b64encode(':'.join((username, password, promo_code)))
 
 
@@ -78,8 +131,10 @@ def get_kwargs(username=None, password=None, promo_code=None, no_content=False):
     return new_r_kwargs
 
 
-# authenticates using either username/password or a remember me token
 def authenticate(username=None, password=None, token=None, promo_code=None, acq_src=None):
+    '''
+    Authenticates using either username/password or a remember me token
+    '''
     params = {'promocode': promo_code if promo_code else CONFIG['PROMO_CODE']}
     if not token:
         params['loginname'] = username
@@ -91,13 +146,16 @@ def authenticate(username=None, password=None, token=None, promo_code=None, acq_
 
     response = requests.get("%s/consumers/useraccount/" % (BASE_URL, ),
         params=params, **get_kwargs())
+    log_api_call(status_code=response.status_code)
     if response.status_code == 200:
         return response.content  # response body contains consumer_id
     return None
 
 
-# logs the consumer out on Neo server
 def logout(consumer_id, promo_code=None, acq_src=None):
+    '''
+    Logs the consumer out on Neo server
+    '''
     params = {'promocode': promo_code if promo_code else CONFIG['PROMO_CODE']}
     if acq_src:
         params['acquisitionsource'] = acq_src
@@ -105,18 +163,24 @@ def logout(consumer_id, promo_code=None, acq_src=None):
         params=params, **get_kwargs(no_content=True))
     if response.status_code != 200:
         raise _get_error(response)
+    log_api_call()
 
 
-# stores a remember me token on Neo server
 def remember_me(consumer_id, token):
+    '''
+    Stores a remember me token on Neo server
+    '''
     response = requests.put("%s/consumers/%s/useraccount" % (BASE_URL, consumer_id),
         params={'authtoken': token}, **get_kwargs())
     if response.status_code != 200:
         raise _get_error(response)
+    log_api_call()
 
 
-# creates a consumer and returns the consumer id and validation uri
 def create_consumer(consumer):
+    '''
+    Creates a consumer and returns the consumer id and validation uri
+    '''
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
@@ -124,6 +188,7 @@ def create_consumer(consumer):
         data=data_stream.getvalue(), **get_kwargs())
     data_stream.close()
     if response.status_code == 201:
+        log_api_call(status_code=201)
         # parse the consumer_id in location header
         uri = response.headers["Location"]
         match = re.search(r"/consumers/(?P<id>\d+)/", uri)
@@ -133,8 +198,10 @@ def create_consumer(consumer):
         raise _get_error(response)
 
 
-# activates the newly created consumer account, optionally using a validation uri
 def complete_registration(consumer_id, uri=None):
+    '''
+    Activates the newly created consumer account, optionally using a validation uri
+    '''
     if not uri:
         response = requests.post("%s/consumers/%s/registration" % (BASE_URL, consumer_id),
             **get_kwargs(no_content=True))
@@ -142,17 +209,22 @@ def complete_registration(consumer_id, uri=None):
         response = requests.get(uri)
     if response.status_code != 200:
         raise _get_error(response)
+    log_api_call()
 
 
-# retrieves a list of consumers' identified by email/mobile id and DOB
-# returns a list of dicts like [{'ConsumerID': val, 'LoginName': val, 'ApplicationName': val}, ...]
 def get_consumers(email_id, dob):
+    '''
+    Retrieves a list of consumers' identified by email/mobile id and DOB
+    Returns a list of dicts like
+    [{'ConsumerID': val, 'LoginName': val, 'ApplicationName': val}, ...]
+    '''
     dob_str = dob.strftime("%Y%m%d")
     response = requests.get("%s/consumers/" % (BASE_URL, ),
         params = {'dateofbirth': dob_str, 'emailid': email_id}, **get_kwargs())
     if response.status_code == 200:
         try:
             consumers = parseString(response.content).Consumer
+            log_api_call()
             return [o.__dict__ for o in consumers]
         except GDSParseError:
             pass
@@ -160,8 +232,10 @@ def get_consumers(email_id, dob):
     raise _get_error(response)
 
 
-# links a consumer account from another app with this app
 def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None):
+    '''
+    Links a consumer account from another app with this app
+    '''
     #if CONFIG.get('USE_MCAL', False):
     #    raise NotImplementedError("Consumer requests not supported via MCAL")
     params = {
@@ -175,58 +249,75 @@ def link_consumer(consumer_id, username, password, promo_code=None, acq_src=None
         params=params, **get_kwargs())
     if response.status_code == 200:
         try:
-            return parseString(response.content)
+            obj_from_xml = parseString(response.content)
+            log_api_call()
+            return obj_from_xml
         except GDSParseError:
             pass
 
     raise _get_error(response)
 
 
-# get a consumer object containing all the consumer data
 def get_consumer(consumer_id, username=None, password=None, promo_code=None):
+    '''
+    Get a consumer object containing all the consumer data
+    '''
     response = requests.get("%s/consumers/%s/all" % (BASE_URL, consumer_id),
         **get_kwargs(username=username, password=password, promo_code=promo_code))
     if response.status_code == 200:
         try:
-            return parseString(response.content)
+            obj_from_xml = parseString(response.content)
+            log_api_call()
+            return obj_from_xml
         except GDSParseError:
             pass
 
     raise _get_error(response)
 
 
-# get a consumer's profile
 def get_consumer_profile(consumer_id, username=None, password=None, promo_code=None):
+    '''
+    Get a consumer's profile
+    '''
     response = requests.get("%s/consumers/%s/profile" % (BASE_URL, consumer_id),
         **get_kwargs(username=username, password=password, promo_code=promo_code))
     if response.status_code == 200:
         try:
-            return parseString(response.content)
+            obj_from_xml = parseString(response.content)
+            log_api_call()
+            return obj_from_xml
         except GDSParseError:
             pass
 
     raise _get_error(response)
 
 
-# get a consumer's preferences
-# specify category_id to get preferences for a category, otherwise all preferences are returned
 def get_consumer_preferences(consumer_id, category_id=None,
     username=None, password=None, promo_code=None):
+    '''
+    Get a consumer's preferences
+    Specify category_id to get preferences for a category,
+    otherwise all preferences are returned
+    '''
     uri = "%s/consumers/%s/preferences" % (BASE_URL, consumer_id)
     if category_id:
         uri += "/category/%s" % category_id
     response = requests.get(uri, **get_kwargs(username=username, password=password, promo_code=promo_code))
     if response.status_code == 200:
         try:
-            return parseString(response.content)
+            obj_from_xml = parseString(response.content)
+            log_api_call()
+            return obj_from_xml
         except GDSParseError:
             pass
 
     raise _get_error(response)
 
 
-# update a consumer's data on the Neo server
 def update_consumer(consumer_id, consumer, username=None, password=None, promo_code=None):
+    '''
+    Update a consumer's data on the Neo server
+    '''
     data_stream = StringIO()
     # write the consumer data in xml to a string stream
     consumer.export(data_stream, 0)
@@ -235,6 +326,7 @@ def update_consumer(consumer_id, consumer, username=None, password=None, promo_c
     data_stream.close()
     if response.status_code != 200:
         raise _get_error(response)
+    log_api_call()
 
 
 def _update_question_answers(consumer_id, object, category_id=None, create=False,
@@ -255,37 +347,49 @@ def _update_question_answers(consumer_id, object, category_id=None, create=False
     data_stream.close()
     if response.status_code != 200:
         raise _get_error(response)
+    log_api_call(function_call_tup=inspect.stack()[1])
 
 
-# create consumer preferences
-# specify category_id to update preferences for a category, otherwise all preferences are updated
 def update_consumer_preferences(consumer_id, preferences, category_id=None, create=False,
     username=None, password=None, promo_code=None):
+    '''
+    Create consumer preferences
+    Specify category_id to update preferences for a category,
+    otherwise all preferences are updated
+    '''
     _update_question_answers(consumer_id, preferences, category_id, create, username,
         password, promo_code, 'Preferences')
 
 
-# add digital interactions to consumer
 def update_digital_interactions(consumer_id, digital_interactions, category_id=None, create=False,
     username=None, password=None, promo_code=None):
+    '''
+    Add digital interactions to consumer
+    '''
     _update_question_answers(consumer_id, digital_interactions, category_id, create, username,
         password, promo_code, 'DigitalInteractions')
 
 
-# add conversion locations to consumer
 def update_conversion_locations(consumer_id, conversion_locations, category_id=None, create=False,
     username=None, password=None, promo_code=None):
+    '''
+    Add conversion locations to consumer
+    '''
     _update_question_answers(consumer_id, conversion_locations, category_id, create, username,
         password, promo_code, 'ConversionLocations')
 
 
-# deletes the consumer account
 def remove_consumer(consumer_id):
+    '''
+    Deletes the consumer account
+    '''
     raise NotImplementedError()
 
 
-# gets an ID token to change a forgotten password
 def get_forgot_password_token(username):
+    '''
+    Gets an ID token to change a forgotten password
+    '''
     params = {
         'loginname': username,
         'temptoken': 0
@@ -294,16 +398,21 @@ def get_forgot_password_token(username):
         params=params, **get_kwargs())
     if response.status_code == 200:
         try:
-            return parseString(response.content)
+            obj_from_xml = parseString(response.content)
+            log_api_call()
+            return obj_from_xml
         except GDSParseError:
             pass
 
     raise _get_error(response)
 
 
-# changes user's password, possibly using the token generated by get_forgot_password_token
-# returns the consumer_id
 def change_password(username, new_password, old_password=None, token=None):
+    '''
+    Changes user's password, possibly using the token
+    generated by get_forgot_password_token
+    Returns the consumer_id
+    '''
     params = {'loginname': username}
     if old_password:
         params['newpassword'] = new_password
@@ -317,14 +426,17 @@ def change_password(username, new_password, old_password=None, token=None):
         params=params, **get_kwargs(no_content=True))
 
     if response.status_code == 200:
+        log_api_call()
         return response.content
 
     raise _get_error(response)
 
 
-# unsubscribe from some brand or communication channel
-# the user must be logged in
 def unsubscribe(consumer_id, unsubscribe_obj):
+    '''
+    Unsubscribe from some brand or communication channel
+    The user must be logged in
+    '''
     data_stream = StringIO()
     # write the unsubscribe data in xml to a string stream
     unsubscribe_obj.export(data_stream, 0)
@@ -333,10 +445,13 @@ def unsubscribe(consumer_id, unsubscribe_obj):
     data_stream.close()
     if response.status_code != 200:
         raise _get_error(response)
+    log_api_call()
 
 
-# add a promo code to a consumer (from master promo code list)
 def add_promo_code(consumer_id, promo_code, acq_src=None, username=None, password=None):
+    '''
+    Add a promo code to a consumer (from master promo code list)
+    '''
     params = {'promocode': promo_code}
     if acq_src:
         params['acquisitionsource'] = acq_src
@@ -344,10 +459,13 @@ def add_promo_code(consumer_id, promo_code, acq_src=None, username=None, passwor
         params=params, **get_kwargs(username=username, password=password, no_content=True))
     if response.status_code != 200:
         raise _get_error(response)
+    log_api_call()
 
 
-# check if the user is of allowable age
 def do_age_check(dob, country_code, gateway_id, language_code=None):
+    '''
+    Check if the user is of allowable age
+    '''
     dob_str = dob.strftime("%Y%m%d")
     params = {
         'dateofbirth': dob_str,
@@ -360,15 +478,19 @@ def do_age_check(dob, country_code, gateway_id, language_code=None):
         params=params, **get_kwargs())
     if response.status_code == 200:
         try:
-            return parseString(response.content)
+            obj_from_xml = parseString(response.content)
+            log_api_call()
+            return obj_from_xml
         except GDSParseError:
             pass
 
     raise _get_error(response)
 
 
-# get country details
 def get_country(country_code=None, ip_address=None):
+    '''
+    Get country details
+    '''
     if country_code:
         params = {'countrycode': country_code}
     elif ip_address:
@@ -379,7 +501,9 @@ def get_country(country_code=None, ip_address=None):
         params=params, **get_kwargs())
     if response.status_code == 200:
         try:
-            return parseString(response.content)
+            obj_from_xml = parseString(response.content)
+            log_api_call()
+            return obj_from_xml
         except GDSParseError:
             pass
 
