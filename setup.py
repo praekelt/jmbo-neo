@@ -1,5 +1,14 @@
 from setuptools import setup, find_packages
 
+
+def getcmdclass():
+    try:
+        from setuptest import test
+        return test
+    except ImportError:
+        return None
+
+
 setup(
     name='jmbo-neo',
     version='0.4.4.1',
@@ -13,15 +22,16 @@ setup(
     install_requires = [
         'jmbo-foundry>=1.1.15,<1.2',
         'django-ckeditor',
-        # jmbo-neo depends on requests.defaults, which requests 1.0.0 removes.
-        'requests<1',
+        'requests',
         'lxml',
         'django>=1.4,<1.5',
+        'mock'
     ],
     tests_require=[
         'django-setuptest',
     ],
     test_suite="setuptest.setuptest.SetupTestSuite",
+    cmdclass={'test': getcmdclass()},
     include_package_data=True,
     classifiers = [
         "Programming Language :: Python",

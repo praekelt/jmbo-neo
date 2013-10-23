@@ -18,8 +18,6 @@ try:
     CONFIG = getattr(settings, 'NEO')
     # the base url for Neo services
     BASE_URL = '/'.join((CONFIG['URL'], CONFIG['APP_ID'], CONFIG['VERSION_ID']))
-    # make the request module catch all exceptions
-    requests.defaults.safe_mode = True
     # use basic http authentication
     HEADERS = {'content-type': 'application/xml'}
     if CONFIG.get('USE_MCAL', False):
@@ -73,31 +71,41 @@ def _get_error(response):
     '''
     Determine the appropriate error
     '''
+    exception = None
     if response.status_code == 500:
         exception = Exception("Neo Web Services not responding")
-    try:
-        neo_resp = parseString(response.content)
-        errors = None
-        if isinstance(neo_resp, ResponseListType):
-            errors = neo_resp.Response
-        elif isinstance(neo_resp, ResponseType):
-            errors = [neo_resp]
-        else:
-            exception = Exception(response.content)
-        err_msg_list = []
-        for error in errors:
-            if error.ResponseCode == 'INVALID_APPID':
-                exception = exceptions.ImproperlyConfigured("Neo App ID is invalid.")
-            elif error.ResponseCode == 'INVALID_VERSION':
-                exception = exceptions.ImproperlyConfigured("Neo API version is invalid.")
-            elif error.ResponseCode == 'BAD_REQUEST' or response.request.method == 'POST' or \
-                response.request.method == 'PUT':
-                err_msg_list.append(_(error.ResponseMessage))
+    else:
+        try:
+            neo_resp = parseString(response.content)
+            errors = None
+            if isinstance(neo_resp, ResponseListType):
+                errors = neo_resp.Response
+            elif isinstance(neo_resp, ResponseType):
+                errors = [neo_resp]
             else:
                 exception = Exception(response.content)
-        exception = exceptions.ValidationError(err_msg_list)
-    except GDSParseError:
-        exception = Exception(response.content)
+
+            if not exception:
+                err_msg_list = []
+                for error in errors:
+                    if error.ResponseCode == 'INVALID_APPID':
+                        exception = exceptions.ImproperlyConfigured(
+                            "Neo App ID is invalid."
+                        )
+                    elif error.ResponseCode == 'INVALID_VERSION':
+                        exception = exceptions.ImproperlyConfigured(
+                            "Neo API version is invalid."
+                        )
+                    elif (error.ResponseCode == 'BAD_REQUEST' or
+                          response.request.method == 'POST' or
+                          response.request.method == 'PUT'):
+                        err_msg_list.append(_(error.ResponseMessage))
+                    else:
+                        exception = Exception(response.content)
+                if not exception:
+                    exception = exceptions.ValidationError(err_msg_list)
+        except GDSParseError:
+            exception = Exception(response.content)
 
     log_api_call(function_call_tup=inspect.stack()[1],
                  log_level=logging.ERROR,

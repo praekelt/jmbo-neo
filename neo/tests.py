@@ -1,25 +1,22 @@
 # encoding: utf-8
-import re
 import time
 from os import path
-from datetime import timedelta, date
+from datetime import timedelta
 from io import BytesIO
+import logging
+import requests
 
 from lxml import etree, objectify
+from mock import patch
 
 from django.test import TestCase
 from django.utils import timezone
 from django.core import management
 from django.core.cache import cache
 from django.conf import settings
-from django.core.urlresolvers import reverse
-from django.contrib.sessions.models import Session
 from django.http import HttpRequest
 from django.utils.importlib import import_module
 from django.contrib.auth import login, authenticate
-from django.contrib.auth.models import User
-from django.db.models.fields import FieldDoesNotExist
-from django.contrib.auth.hashers import make_password
 from django.db import connection, transaction, IntegrityError
 
 from foundry.models import Member, Country
@@ -260,8 +257,58 @@ class NeoTestCase(_MemberTestCase, TestCase):
         member.first_name = "%sx" % member.first_name
         member.save()
 
-    def test_logging(self):
-        pass
+    @patch.object(logging.NullHandler, 'handle')
+    @patch('requests.put')
+    @patch('requests.post')
+    @patch('requests.get')
+    def test_logging(self, mock_get, mock_post, mock_put, mock_handle):
+        # patch requests to avoid hitting the Neo API
+        mocked_response = requests.Response()
+        mocked_response.status_code = 200
+        mocked_response._content = '1'
+        mock_get.return_value = mocked_response
+        mock_put.return_value = mocked_response
+        mocked_response_201 = requests.Response()
+        mocked_response_201.status_code = 201
+        mocked_response_201.headers['Location'] = "/consumers/1/"
+
+        def mock_post_response(*args, **kwargs):
+            if args[0].endswith('registration'):
+                return mocked_response
+            return mocked_response_201
+
+        mock_post.side_effect = mock_post_response
+        # configure and set the logger manually since
+        # it's created before the Django settings are parsed
+        logging.config.dictConfig(settings.LOGGING)
+        api.logger = logging.getLogger('neo.api')
+        # should log create_consumer and complete_registration calls
+        member = self.create_member()
+        self.assertEqual(mock_handle.call_count, 2)
+        self.assertIn('create_consumer(consumer=',
+                      mock_handle.call_args_list[0][0][0].getMessage())
+        self.assertIn("complete_registration(consumer_id='1'",
+                      mock_handle.call_args_list[1][0][0].getMessage())
+        # should log an update_consumer call
+        member.receive_sms = not member.receive_sms
+        member.save()
+        self.assertEqual(mock_handle.call_count, 3)
+        self.assertIn("update_consumer(consumer_id='1', consumer=",
+                      mock_handle.call_args_list[2][0][0].getMessage())
+        # should log an authenticate call
+        self.client.login(username=member.username, password='password')
+        self.assertEqual(mock_handle.call_count, 4)
+        self.assertIn("authenticate(username=%s, password='***', "
+                      % repr(unicode(member.neoprofile.login_alias)),
+                      mock_handle.call_args_list[3][0][0].getMessage())
+        # should log an error update_consumer call
+        mocked_response.status_code = 500
+        member.receive_sms = not member.receive_sms
+        with self.assertRaises(Exception):
+            member.save()
+        self.assertEqual(mock_handle.call_count, 5)
+        self.assertIn("update_consumer(consumer_id='1', consumer=",
+                      mock_handle.call_args_list[4][0][0].getMessage())
 
     def test_username_normalization(self):
         # username should be lower case, [ +] replaced with '', and padded up to len = 4

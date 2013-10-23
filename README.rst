@@ -52,3 +52,9 @@ The following settings must be added to settings.py::
     }
 
     AUTHENTICATION_BACKENDS = ('neo.backends.NeoBackend',)
+
+To-do
+-----
+
+1. Replace generateDS.py with `lxml.objectify`.
+2. Mock testing calls to Neo API using `mock`.
