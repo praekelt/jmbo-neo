@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.4.5.1 (17-01-2014)
+--------------------
+#. Increase upper limit on jmbo-foundry version.
+
 0.4.5 (23-10-2013)
 ------------------
 #. Log all API calls. Uses `neo.api` logger.
