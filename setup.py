@@ -11,7 +11,7 @@ def getcmdclass():
 
 setup(
     name='jmbo-neo',
-    version='0.4.5',
+    version='0.4.5.1',
     description='Jmbo Neo Web Services integration app.',
     long_description = open('README.rst', 'r').read() + open('AUTHORS.rst', 'r').read() + open('CHANGELOG.rst', 'r').read(),
     author='Praekelt International',
@@ -20,7 +20,7 @@ setup(
     url='http://github.com/praekelt/jmbo-neo',
     packages = find_packages(),
     install_requires = [
-        'jmbo-foundry>=1.1.15,<1.2',
+        'jmbo-foundry>=1.1.15,<1.3',
         'django-ckeditor',
         'requests',
         'lxml',
